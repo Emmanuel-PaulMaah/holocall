@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HoloCall — International (SFU)</title>
+    <!-- tiny inline icon to stop favicon 404 noise -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 16px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      input { padding: 8px; }
+      button { padding: 10px 14px; cursor: pointer; }
+      video { width: 48%; max-width: 640px; background:#000; aspect-ratio:16/9; }
+      #videos { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+      #log { white-space: pre-wrap; font-size: 12px; background: #f6f6f9; padding: 8px; margin-top: 12px; height: 200px; overflow:auto; border:1px solid #e6e6ee; }
+      .muted { opacity: 0.6; }
+    </style>
+  </head>
+  <body>
+    <h1>HoloCall — International Test</h1>
+
+    <div class="row">
+      <input id="room" placeholder="room name (e.g. test123)" />
+      <input id="name" placeholder="your name" />
+      <button id="joinBtn">Join</button>
+      <button id="leaveBtn" disabled>Leave</button>
+      <button id="muteBtn" disabled>Mute Mic</button>
+      <button id="camBtn" disabled>Camera Off</button>
+      <button id="unmuteRemoteBtn" disabled>Enable Remote Audio</button>
+    </div>
+
+    <div id="videos">
+      <div>
+        <div>Local</div>
+        <video id="localVideo" autoplay playsinline muted class="muted"></video>
+      </div>
+      <div>
+        <div>Remote</div>
+        <video id="remoteVideo" autoplay playsinline muted></video>
+      </div>
+    </div>
+
+    <div id="log"></div>
+
+    <script type="module">
+      // ESM client from jsDelivr (reliable)
+      import {
+        Room, RoomEvent, createLocalTracks, setLogLevel, Track
+      } from 'https://cdn.jsdelivr.net/npm/livekit-client/+esm';
+
+      const $ = (id) => document.getElementById(id);
+      const log = (m) => { console.log(m); const L=$('log'); L.textContent += m + '\\n'; L.scrollTop = L.scrollHeight; };
+
+      const state = {
+        room: null,
+        localTracks: [],
+        micOn: true,
+        camOn: true,
+        livekitUrl: null,
+        remoteAudioEl: null,
+      };
+
+      async function fetchConfig() {
+        const res = await fetch('/api/config', { cache: 'no-store' });
+        const j = await res.json();
+        state.livekitUrl = j.livekitUrl;
+        if (!state.livekitUrl) throw new Error('LIVEKIT_URL missing on server');
+        log('LiveKit URL: ' + state.livekitUrl);
+      }
+
+      async function getToken(room, user) {
+        const r = await fetch(`/api/token?room=${encodeURIComponent(room)}&user=${encodeURIComponent(user)}`, { cache: 'no-store' });
+        if (!r.ok) throw new Error('Token fetch failed');
+        return r.text();
+      }
+
+      function ensureAttrs(videoEl) {
+        videoEl.muted = true;                // keep muted to satisfy autoplay
+        videoEl.autoplay = true;
+        videoEl.playsInline = true;
+        videoEl.setAttribute('muted','');
+        videoEl.setAttribute('autoplay','');
+        videoEl.setAttribute('playsinline','');
+      }
+
+      function previewLocal(tracks) {
+        const v = $('localVideo');
+        ensureAttrs(v);
+        try { v.srcObject = null; } catch {}
+        // Prefer LiveKit attach for the video track
+        const videoTrack = tracks.find(t => t.kind === 'video');
+        if (videoTrack && typeof videoTrack.attach === 'function') {
+          videoTrack.attach(v);
+        } else {
+          const stream = new MediaStream(tracks.map(t => t.mediaStreamTrack));
+          v.srcObject = stream;
+          v.play().catch(()=>{});
+        }
+        v.onloadedmetadata = () => console.log('local loadedmetadata', v.videoWidth, v.videoHeight);
+        v.classList.remove('muted');
+      }
+
+      function attachRemoteTrack(track, pub, participant) {
+        if (pub.kind === Track.Kind.Video) {
+          const videoEl = $('remoteVideo');
+          ensureAttrs(videoEl);
+          try { videoEl.srcObject = null; } catch {}
+          track.attach(videoEl);  // LiveKit-recommended
+          videoEl.onloadedmetadata = () => console.log('remote loadedmetadata', videoEl.videoWidth, videoEl.videoHeight);
+          log('attached remote VIDEO from ' + participant.identity);
+        } else if (pub.kind === Track.Kind.Audio) {
+          if (!state.remoteAudioEl) {
+            const a = document.createElement('audio');
+            a.id = 'remoteAudio';
+            a.autoplay = true;
+            a.muted = true;           // keep muted until user clicks "Enable Remote Audio"
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            state.remoteAudioEl = a;
+          }
+          track.attach(state.remoteAudioEl);
+          log('attached remote AUDIO from ' + participant.identity);
+          $('unmuteRemoteBtn').disabled = false;
+        }
+      }
+
+      async function join() {
+        const roomName = $('room').value.trim();
+        const userName = $('name').value.trim() || ('web-' + Math.random().toString(36).slice(2));
+        if (!roomName) { alert('enter room name'); return; }
+
+        await fetchConfig();
+        const token = await getToken(roomName, userName);
+
+        setLogLevel('warn');
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+          // autoSubscribe true by default
+        });
+        state.room = room;
+
+        // events
+        room.on(RoomEvent.Connected, () => log('connected'));
+        room.on(RoomEvent.Reconnecting, () => log('reconnecting...'));
+        room.on(RoomEvent.Disconnected, () => log('disconnected'));
+        room.on(RoomEvent.ParticipantConnected, (p) => log('participant connected: ' + p.identity));
+        room.on(RoomEvent.TrackPublished, (pub, p) => log('participant published: ' + pub.kind + ' from ' + p.identity));
+        room.on(RoomEvent.TrackSubscribed, (track, pub, p) => {
+          log('remote track subscribed: ' + pub.kind + ' from ' + p.identity);
+          attachRemoteTrack(track, pub, p);
+        });
+        room.on(RoomEvent.TrackUnsubscribed, (_t, pub, p) => {
+          log('remote track unsubscribed: ' + pub.kind + ' from ' + p.identity);
+          $('remoteVideo').srcObject = null;
+        });
+
+        // create local tracks BEFORE connect (we have a click gesture)
+        const localTracks = await createLocalTracks({
+          audio: true,
+          video: { facingMode: 'user', width: 960, frameRate: 24 }
+        });
+        state.localTracks = localTracks;
+        previewLocal(localTracks);
+
+        // connect then publish
+        await room.connect(state.livekitUrl, await token);
+        for (const t of localTracks) {
+          await room.localParticipant.publishTrack(t);
+        }
+
+        // ui
+        $('joinBtn').disabled = true;
+        $('leaveBtn').disabled = false;
+        $('muteBtn').disabled = false;
+        $('camBtn').disabled = false;
+        $('unmuteRemoteBtn').disabled = false;
+        log('joined room: ' + roomName + ' as ' + userName);
+
+        // diagnostics after a moment
+        setTimeout(() => diag('post-join'), 1000);
+      }
+
+      async function leave() {
+        try {
+          if (state.room) await state.room.disconnect();
+          for (const t of state.localTracks) { try { t.stop(); } catch {} }
+        } finally {
+          state.room = null; state.localTracks = [];
+          $('joinBtn').disabled = false;
+          $('leaveBtn').disabled = true;
+          $('muteBtn').disabled = true;
+          $('camBtn').disabled = true;
+          $('unmuteRemoteBtn').disabled = true;
+          $('localVideo').srcObject = null;
+          $('remoteVideo').srcObject = null;
+          if (state.remoteAudioEl) { state.remoteAudioEl.srcObject = null; }
+          log('left');
+        }
+      }
+
+      function toggleMic() {
+        state.micOn = !state.micOn;
+        for (const t of state.localTracks) {
+          if (t.kind === 'audio') t.mediaStreamTrack.enabled = state.micOn;
+        }
+        $('muteBtn').textContent = state.micOn ? 'Mute Mic' : 'Unmute Mic';
+      }
+
+      function toggleCam() {
+        state.camOn = !state.camOn;
+        for (const t of state.localTracks) {
+          if (t.kind === 'video') t.mediaStreamTrack.enabled = state.camOn;
+        }
+        $('camBtn').textContent = state.camOn ? 'Camera Off' : 'Camera On';
+      }
+
+      function unmuteRemoteAudio() {
+        // user gesture → we can unmute audio elements safely
+        if (state.remoteAudioEl) {
+          state.remoteAudioEl.muted = false;
+          state.remoteAudioEl.play().catch(()=>{});
+          log('remote audio unmuted');
+        } else {
+          log('no remote audio element yet');
+        }
+      }
+
+      function diag(tag='diag') {
+        const lv = $('localVideo');
+        const rv = $('remoteVideo');
+        console.log(tag, 'LOCAL', { paused: lv?.paused, w: lv?.videoWidth, h: lv?.videoHeight, src: !!lv?.srcObject });
+        console.log(tag, 'REMOTE', { paused: rv?.paused, w: rv?.videoWidth, h: rv?.videoHeight, src: !!rv?.srcObject });
+      }
+
+      // wire buttons
+      $('joinBtn').addEventListener('click', join);
+      $('leaveBtn').addEventListener('click', leave);
+      $('muteBtn').addEventListener('click', toggleMic);
+      $('camBtn').addEventListener('click', toggleCam);
+      $('unmuteRemoteBtn').addEventListener('click', unmuteRemoteAudio);
+    </script>
+  </body>
+</html>
