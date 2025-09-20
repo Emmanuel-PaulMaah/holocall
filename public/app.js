@@ -33,15 +33,39 @@ function previewLocal(tracks){
   else { const s=new MediaStream(tracks.map(t=>t.mediaStreamTrack)); v.srcObject=s; v.play().catch(()=>{}); }
   v.classList.remove('muted');
 }
-function attachRemoteTrack(track,pub){
-  if(pub.kind==='video'){
-    const rv=$('remoteVideo'); ensureAttrs(rv); try{ rv.srcObject=null; }catch{}; track.attach(rv);
-    $('remoteHoloVideo').srcObject = rv.srcObject; // feed AR texture source
-  } else if(pub.kind==='audio'){
-    if(!state.remoteAudioEl){ const a=document.createElement('audio'); a.autoplay=true; a.style.display='none'; document.body.appendChild(a); state.remoteAudioEl=a; }
-    track.attach(state.remoteAudioEl); state.remoteAudioEl.muted=false; state.remoteAudioEl.play().catch(()=>{});
+function attachRemoteTrack(track, pub){
+  if(pub.kind === 'video'){
+    const rv = $('remoteVideo');
+    ensureAttrs(rv);
+    try { rv.srcObject = null; } catch {}
+    track.attach(rv);
+
+    // feed the hidden AR texture source and FORCE playback
+    const hv = $('remoteHoloVideo');
+    ensureAttrs(hv);               // playsinline/autoplay/muted attributes
+    hv.muted = true;               // allow autoplay on mobile
+    hv.srcObject = rv.srcObject;   // mirror the same MediaStream
+    // kick playback; ignore promise rejection (some browsers resolve later)
+    const tryPlay = () => hv.play().catch(() => {});
+    hv.addEventListener('loadeddata', tryPlay, { once: true });
+    hv.addEventListener('playing',    () => {}, { once: true });
+    // also try immediately (if track was already flowing)
+    tryPlay();
+
+  } else if(pub.kind === 'audio'){
+    if(!state.remoteAudioEl){
+      const a = document.createElement('audio');
+      a.autoplay = true;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      state.remoteAudioEl = a;
+    }
+    track.attach(state.remoteAudioEl);
+    state.remoteAudioEl.muted = false;
+    state.remoteAudioEl.play().catch(()=>{});
   }
 }
+
 
 /* ---------------- join / leave ---------------- */
 async function join(){
@@ -219,29 +243,53 @@ function renderXR(_t, frame){
 
 function tryPlaceVideoPlane(){
   if(videoPlane) return;
-  const remoteVid=$('remoteHoloVideo');
-  if(!remoteVid.srcObject){ showToast('remote video not ready'); return; }
 
-  const geom=new THREE.PlaneGeometry(1.5,1.0);
-  const texture=new THREE.VideoTexture(remoteVid);
-  const mat=new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
-  videoPlane=new THREE.Mesh(geom,mat);
-
-  if(hitTestSource && reticle?.visible){
-    const m=new THREE.Matrix4(); m.copy(reticle.matrix);
-    videoPlane.position.setFromMatrixPosition(m);
-    videoPlane.quaternion.setFromRotationMatrix(m);
-  }else{
-    // fallback: 2m in front of XR camera
-    const xrCam = renderer.xr.getCamera(camera);
-    const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
-    const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion).normalize();
-    const pos = camPos.clone().add(forward.multiplyScalar(2.0));
-    videoPlane.position.copy(pos);
-    videoPlane.lookAt(camPos);
+  const remoteVid = $('remoteHoloVideo');
+  if(!remoteVid.srcObject){
+    showToast('remote video not ready');
+    return;
   }
-  scene.add(videoPlane);
+
+  // helper: wait until the hidden video has decodable frames
+  const ensureReady = () => {
+    if (remoteVid.readyState >= 2) return Promise.resolve();
+    return new Promise(resolve => {
+      const onReady = () => { remoteVid.removeEventListener('loadeddata', onReady); resolve(); };
+      remoteVid.addEventListener('loadeddata', onReady, { once: true });
+      // also try to play again (android)
+      remoteVid.play().catch(()=>{});
+    });
+  };
+
+  ensureReady().then(() => {
+    const geom = new THREE.PlaneGeometry(1.5, 1.0);
+    const texture = new THREE.VideoTexture(remoteVid);
+    // optional: slightly better sampling on phones
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+
+    const mat = new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
+    videoPlane = new THREE.Mesh(geom, mat);
+
+    if(hitTestSource && reticle?.visible){
+      const m = new THREE.Matrix4(); m.copy(reticle.matrix);
+      videoPlane.position.setFromMatrixPosition(m);
+      videoPlane.quaternion.setFromRotationMatrix(m);
+    } else {
+      // fallback: ~2m in front of XR camera
+      const xrCam = renderer.xr.getCamera(camera);
+      const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
+      const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion).normalize();
+      const pos = camPos.clone().add(forward.multiplyScalar(2.0));
+      videoPlane.position.copy(pos);
+      videoPlane.lookAt(camPos);
+    }
+
+    scene.add(videoPlane);
+  });
 }
+
 
 async function endHoloMode(){ try{ await xrSession?.end(); }catch{} cleanupXR(); }
 function cleanupXR(){
