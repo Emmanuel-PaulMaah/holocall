@@ -7,7 +7,7 @@ import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/
 
 const $ = (id) => document.getElementById(id);
 const setDisabled = (id, val) => { const el = $(id); if (el) el.disabled = val; };
-const log = (m) => { console.log(m); const L=$('log'); if (L){ L.textContent += m + '\n'; L.scrollTop = L.scrollHeight; } };
+const log = (m) => { console.log(m); const L = $('log'); if (L) { L.textContent += m + '\n'; L.scrollTop = L.scrollHeight; } };
 
 const state = {
   room: null,
@@ -38,6 +38,7 @@ function showToast(msg) {
 
 function setUIState({ joined = state.joined, micOn = state.micOn, camOn = state.camOn } = {}) {
   state.joined = joined; state.micOn = micOn; state.camOn = camOn;
+
   setDisabled('joinBtn', joined);
   setDisabled('leaveBtn', !joined);
   setDisabled('muteBtn',  !joined);
@@ -87,7 +88,8 @@ function attachRemoteTrack(track, pub, participant) {
     ensureAttrs(videoEl);
     try { videoEl.srcObject = null; } catch {}
     track.attach(videoEl);
-    // also mirror into hidden holo video
+
+    // mirror into hidden holo video (for AR texture)
     const holoVid = $('remoteHoloVideo');
     holoVid.srcObject = videoEl.srcObject;
   } else if (pub.kind === Track.Kind.Audio) {
@@ -107,6 +109,7 @@ function attachRemoteTrack(track, pub, participant) {
 async function join() {
   const roomName = $('room').value.trim();
   const userName = $('name').value.trim();
+
   if (!roomName) { showToast('enter a room name'); $('room')?.focus(); return; }
   if (!userName) { showToast('enter your name');  $('name')?.focus(); return; }
 
@@ -124,7 +127,7 @@ async function join() {
 
   room.on(RoomEvent.ParticipantConnected, (p) => {
     showToast(`${p.identity} joined`);
-    holoBtn.hidden = false; // show Holo Mode
+    holoBtn.hidden = false; // show Holo Mode when someone joins
   });
   room.on(RoomEvent.ParticipantDisconnected, (p) => {
     showToast(`${p.identity} left`);
@@ -132,7 +135,7 @@ async function join() {
   });
 
   room.on(RoomEvent.TrackSubscribed, (track, pub, p) => attachRemoteTrack(track, pub, p));
-  room.on(RoomEvent.TrackUnsubscribed, () => { $('remoteVideo').srcObject = null; });
+  room.on(RoomEvent.TrackUnsubscribed, () => { const rv = $('remoteVideo'); if (rv) rv.srcObject = null; });
 
   const localTracks = await createLocalTracks({ audio: true, video: { facingMode: 'user', width: 960, frameRate: 24 } });
   state.localTracks = localTracks;
@@ -150,9 +153,9 @@ async function leave() {
     for (const t of state.localTracks) { try { t.stop(); } catch {} }
   } finally {
     state.room = null; state.localTracks = [];
-    $('localVideo').srcObject = null;
-    $('remoteVideo').srcObject = null;
-    $('remoteHoloVideo').srcObject = null;
+    const lv = $('localVideo'); if (lv) lv.srcObject = null;
+    const rv = $('remoteVideo'); if (rv) rv.srcObject = null;
+    const hv = $('remoteHoloVideo'); if (hv) hv.srcObject = null;
     if (state.remoteAudioEl) state.remoteAudioEl.srcObject = null;
     setUIState({ joined: false, micOn: true, camOn: true });
     holoBtn.hidden = true;
@@ -173,12 +176,12 @@ function toggleCam() {
 /* ---------- event wiring ---------- */
 $('joinBtn').addEventListener('click', join);
 $('leaveBtn').addEventListener('click', leave);
-$('muteBtn').addEventListener('click', toggleMic);
-$('camBtn').addEventListener('click', toggleCam);
+$('muteBtn').addEventListener('click',  toggleMic);
+$('camBtn').addEventListener('click',   toggleCam);
 
-icon.mute ?.addEventListener('click', () => $('muteBtn') ?.click());
-icon.cam  ?.addEventListener('click', () => $('camBtn')  ?.click());
-icon.leave?.addEventListener('click', () => openConfirm());
+icon.mute  ?.addEventListener('click', () => $('muteBtn') ?.click());
+icon.cam   ?.addEventListener('click', () => $('camBtn')  ?.click());
+icon.leave ?.addEventListener('click', () => openConfirm());
 
 /* leave confirm overlay */
 const overlay = $('confirmOverlay');
@@ -199,33 +202,24 @@ function trapEsc(e) { if (e.key === 'Escape') closeConfirm(); }
 function backdropClose(e) { if (e.target === overlay) closeConfirm(); }
 confirmCancel.addEventListener('click', closeConfirm);
 confirmLeave .addEventListener('click', () => { closeConfirm(); $('leaveBtn')?.click(); });
-document.addEventListener('keydown', (e) => {
-  const tag = document.activeElement?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-  if (e.key === 'Escape') openConfirm();
-});
 
-/* ---------- lifecycle safety ---------- */
+/* lifecycle safety (BFCache, page close) */
 window.addEventListener('pagehide', () => { if (state.joined) { try { leave(); } catch {} } });
 window.addEventListener('beforeunload', () => { if (state.joined) { try { leave(); } catch {} } });
 window.addEventListener('pageshow', () => { setUIState({ joined: false, micOn: true, camOn: true }); });
 
 /* ==========================================================
-   Holo Mode (WebXR + Three.js)
+   Holo Mode (WebXR + Three.js), tap-to-place remote video
    ========================================================== */
 let renderer, scene, camera, reticle, videoPlane;
 
-if(holoBtn){
-  holoBtn.addEventListener('click', startHoloMode);
-}
-if(arClose){
-  arClose.addEventListener('click', endHoloMode);
-}
+if (holoBtn)   holoBtn.addEventListener('click', startHoloMode);
+if (arClose)   arClose.addEventListener('click', endHoloMode);
 
-function startHoloMode(){
-  if(!navigator.xr){ showToast('WebXR not supported'); return; }
+function startHoloMode() {
+  if (!navigator.xr) { showToast('WebXR not supported'); return; }
 
-  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.xr.enabled = true;
   document.body.appendChild(renderer.domElement);
@@ -233,66 +227,76 @@ function startHoloMode(){
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera();
 
-  const ringGeo = new THREE.RingGeometry(0.05,0.06,32).rotateX(-Math.PI/2);
-  const mat = new THREE.MeshBasicMaterial({ color:0x00ff00 });
-  reticle = new THREE.Mesh(ringGeo,mat);
-  reticle.matrixAutoUpdate=false;
-  reticle.visible=false;
+  // green ring reticle (plane-aligned)
+  const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  reticle = new THREE.Mesh(ringGeo, ringMat);
+  reticle.matrixAutoUpdate = false;
+  reticle.visible = false;
   scene.add(reticle);
 
-  const arButton = ARButton.createButton(renderer, { requiredFeatures:['hit-test'] });
-  arButton.style.display='none'; // hide UI, auto-trigger
+  // hidden ARButton to request session
+  const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+  arButton.style.display = 'none';
   document.body.appendChild(arButton);
   arButton.click();
 
   renderer.setAnimationLoop(renderXR);
-  arClose.hidden=false;
+  arClose.hidden = false;
 
-  // tap to place
-  renderer.domElement.addEventListener('click', ()=>{
-    if(reticle.visible && !videoPlane){
-      const geom = new THREE.PlaneGeometry(1.5,1.0);
+  // tap to place plane
+  renderer.domElement.addEventListener('click', () => {
+    if (reticle.visible && !videoPlane) {
+      const geom = new THREE.PlaneGeometry(1.5, 1.0);
       const remoteVid = $('remoteHoloVideo');
       const texture = new THREE.VideoTexture(remoteVid);
-      const mat = new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
+      const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
       videoPlane = new THREE.Mesh(geom, mat);
-      videoPlane.matrixAutoUpdate=true;
-      videoPlane.position.setFromMatrixPosition(reticle.matrix);
+      videoPlane.matrixAutoUpdate = true;
+      // place where reticle is
+      const m = new THREE.Matrix4(); m.copy(reticle.matrix);
+      videoPlane.position.setFromMatrixPosition(m);
+      videoPlane.quaternion.setFromRotationMatrix(m);
       scene.add(videoPlane);
     }
   });
 }
 
-async function renderXR(timestamp, frame){
+async function renderXR(timestamp, frame) {
   const session = renderer.xr.getSession();
-  if(!session) return;
+  if (!session || !frame) return;
 
   const refSpace = renderer.xr.getReferenceSpace();
-  if(!refSpace) return;
+  if (!refSpace) return;
 
-  if(!frame) return;
-  if(!session.hitTestSourceRequested){
+  // lazily create hit-test source once
+  if (!session.hitTestSourceRequested) {
     const viewerSpace = await session.requestReferenceSpace('viewer');
     session.hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
     session.hitTestSourceRequested = true;
   }
-  if(session.hitTestSource){
+
+  if (session.hitTestSource) {
     const hits = frame.getHitTestResults(session.hitTestSource);
-    if(hits.length){
+    if (hits.length) {
       const hit = hits[0];
       const pose = hit.getPose(refSpace);
-      reticle.visible=true;
+      reticle.visible = true;
       reticle.matrix.fromArray(pose.transform.matrix);
+    } else {
+      reticle.visible = false;
     }
   }
 
-  renderer.render(scene,camera);
+  renderer.render(scene, camera);
 }
 
-function endHoloMode(){
-  renderer.setAnimationLoop(null);
-  if(renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
-  arClose.hidden=true;
-  videoPlane=null;
-  reticle=null;
+function endHoloMode() {
+  if (renderer) {
+    renderer.setAnimationLoop(null);
+    if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+  }
+  arClose.hidden = true;
+  videoPlane = null;
+  reticle = null;
 }
