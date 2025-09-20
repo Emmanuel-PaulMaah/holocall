@@ -2,16 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>HoloCall</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
-    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
   </head>
   <body>
     <h1>HoloCall</h1>
@@ -30,22 +24,13 @@
 
     <!-- stage -->
     <div id="videos" aria-label="Call stage">
-      <!-- AR camera passthrough background (hidden until AR is enabled) -->
-      <video id="arBg" class="ar-bg" autoplay playsinline muted></video>
-
-      <!-- remote + local -->
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo"  autoplay playsinline muted class="muted"></video>
 
       <!-- floating bottom control bar -->
       <div class="control-bar" role="toolbar" aria-label="Call controls">
         <!-- Mic -->
-        <button
-          id="muteIconBtn"
-          class="icon-btn"
-          aria-label="Toggle microphone"
-          aria-pressed="true"
-        >
+        <button id="muteIconBtn" class="icon-btn" aria-label="Toggle microphone" aria-pressed="true">
           <span class="visually-hidden">Mic</span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
@@ -53,12 +38,7 @@
         </button>
 
         <!-- Camera -->
-        <button
-          id="cameraIconBtn"
-          class="icon-btn"
-          aria-label="Toggle camera"
-          aria-pressed="true"
-        >
+        <button id="cameraIconBtn" class="icon-btn" aria-label="Toggle camera" aria-pressed="true">
           <span class="visually-hidden">Camera</span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 10.5V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 4v-11l-4 4z"/>
@@ -66,17 +46,16 @@
         </button>
 
         <!-- Leave -->
-        <button
-          id="leaveIconBtn"
-          class="icon-btn danger"
-          aria-label="Leave call"
-        >
+        <button id="leaveIconBtn" class="icon-btn danger" aria-label="Leave call">
           <span class="visually-hidden">Leave</span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6.62 10.79a15.05 15.05 0 0 1 10.76 0l1.43.57a1 1 0 0 1 .6.92v3.12a1 1 0 0 1-1.38.93l-3.06-1.22a1 1 0 0 1-.62-.74L5 16.33a1 1 0 0 1-1.38-.93V12.28a1 1 0 0 1 .6-.92l1.43-.57z"/>
           </svg>
         </button>
       </div>
+
+      <!-- Holo Mode button (only shown when remote present) -->
+      <button id="holoBtn" class="holo-btn" hidden>Holo Mode</button>
 
       <!-- leave confirmation overlay -->
       <div id="confirmOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
@@ -90,286 +69,19 @@
       </div>
     </div>
 
-    <!-- log (hidden in CSS) -->
+    <!-- hidden log (kept for existing log() calls; CSS hides it) -->
     <pre id="log"></pre>
 
     <!-- toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <!-- app logic -->
-    <script type="module">
-      import {
-        Room, RoomEvent, createLocalTracks, setLogLevel, Track
-      } from 'https://cdn.jsdelivr.net/npm/livekit-client/+esm';
+    <!-- hidden video used as texture source for AR -->
+    <video id="remoteHoloVideo" autoplay playsinline muted hidden></video>
 
-      const $ = (id) => document.getElementById(id);
-      const setDisabled = (id, val) => { const el = $(id); if (el) el.disabled = val; };
-      const log = (m) => { console.log(m); const L=$('log'); if (L){ L.textContent += m + '\\n'; L.scrollTop = L.scrollHeight; } };
+    <!-- AR exit button -->
+    <button id="arClose" class="ar-close" hidden>&times;</button>
 
-      const state = {
-        room: null,
-        localTracks: [],
-        micOn: true,
-        camOn: true,
-        livekitUrl: null,
-        remoteAudioEl: null,
-        joined: false,
-      };
-
-      const icon = {
-        mute:  $('muteIconBtn'),
-        cam:   $('cameraIconBtn'),
-        leave: $('leaveIconBtn'),
-      };
-
-      function showToast(msg) {
-        const t = $('toast');
-        if (!t) return;
-        t.textContent = msg;
-        t.classList.add('show');
-        clearTimeout(showToast._t);
-        showToast._t = setTimeout(() => t.classList.remove('show'), 1800);
-      }
-
-      function setUIState({ joined = state.joined, micOn = state.micOn, camOn = state.camOn } = {}) {
-        state.joined = joined; state.micOn = micOn; state.camOn = camOn;
-
-        setDisabled('joinBtn', joined);
-        setDisabled('leaveBtn', !joined);
-        setDisabled('muteBtn',  !joined);
-        setDisabled('camBtn',   !joined);
-
-        if (icon.mute) {
-          icon.mute.setAttribute('aria-pressed', String(micOn));
-          icon.mute.classList.toggle('is-muted', !micOn);
-        }
-        if (icon.cam) {
-          icon.cam.setAttribute('aria-pressed', String(camOn));
-          icon.cam.classList.toggle('is-camoff', !camOn);
-        }
-      }
-
-      // ---- AR stubs: camera passthrough background ----
-      let _arStream = null;
-
-      async function enableARPreview() {
-        try {
-          _arStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
-            audio: false
-          });
-          const ar = $('arBg');
-          if (ar) {
-            ar.srcObject = _arStream;
-            await ar.play().catch(()=>{});
-          }
-          $('videos')?.classList.add('ar-on');
-          showToast('AR preview on');
-          console.log('[AR] preview enabled');
-        } catch (e) {
-          console.error('[AR] failed to enable preview', e);
-          showToast('camera access failed');
-        }
-      }
-      function disableARPreview() {
-        try {
-          if (_arStream) {
-            _arStream.getTracks().forEach(t => { try { t.stop(); } catch {} });
-            _arStream = null;
-          }
-          const ar = $('arBg');
-          if (ar) ar.srcObject = null;
-          $('videos')?.classList.remove('ar-on');
-          showToast('AR preview off');
-          console.log('[AR] preview disabled');
-        } catch (e) {
-          console.error('[AR] failed to disable preview', e);
-        }
-      }
-      window.enableARPreview = enableARPreview;
-      window.disableARPreview = disableARPreview;
-
-      async function fetchConfig() {
-        const res = await fetch('/api/config', { cache: 'no-store' });
-        const j = await res.json();
-        state.livekitUrl = j.livekitUrl;
-        if (!state.livekitUrl) throw new Error('LIVEKIT_URL missing on server');
-        log('LiveKit URL: ' + state.livekitUrl);
-      }
-
-      async function getToken(room, user) {
-        const r = await fetch(`/api/token?room=${encodeURIComponent(room)}&user=${encodeURIComponent(user)}`, { cache: 'no-store' });
-        if (!r.ok) throw new Error('Token fetch failed');
-        return r.text();
-      }
-
-      function ensureAttrs(videoEl) {
-        videoEl.muted = true;
-        videoEl.autoplay = true;
-        videoEl.playsInline = true;
-        videoEl.setAttribute('muted','');
-        videoEl.setAttribute('autoplay','');
-        videoEl.setAttribute('playsinline','');
-      }
-
-      function previewLocal(tracks) {
-        const v = $('localVideo');
-        ensureAttrs(v);
-        try { v.srcObject = null; } catch {}
-        const videoTrack = tracks.find(t => t.kind === 'video');
-        if (videoTrack && typeof videoTrack.attach === 'function') {
-          videoTrack.attach(v);
-        } else {
-          const stream = new MediaStream(tracks.map(t => t.mediaStreamTrack));
-          v.srcObject = stream;
-          v.play().catch(()=>{});
-        }
-        v.classList.remove('muted');
-      }
-
-      function attachRemoteTrack(track, pub, participant) {
-        if (pub.kind === Track.Kind.Video) {
-          const videoEl = $('remoteVideo');
-          ensureAttrs(videoEl);
-          try { videoEl.srcObject = null; } catch {}
-          track.attach(videoEl);
-          log('attached remote VIDEO from ' + participant.identity);
-        } else if (pub.kind === Track.Kind.Audio) {
-          if (!state.remoteAudioEl) {
-            const a = document.createElement('audio');
-            a.autoplay = true;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            state.remoteAudioEl = a;
-          }
-          track.attach(state.remoteAudioEl);
-          state.remoteAudioEl.muted = false;
-          state.remoteAudioEl.play().catch(()=>{});
-          log('attached remote AUDIO from ' + participant.identity);
-        }
-      }
-
-      async function join() {
-        const roomName = $('room').value.trim();
-        const userName = $('name').value.trim();
-
-        if (!roomName) { showToast('enter a room name'); $('room')?.focus(); return; }
-        if (!userName) { showToast('enter your name');  $('name')?.focus(); return; }
-
-        await fetchConfig();
-        const token = await getToken(roomName, userName);
-
-        setLogLevel('warn');
-        const room = new Room({ adaptiveStream: true, dynacast: true });
-        state.room = room;
-
-        // events
-        room.on(RoomEvent.Connected, () => log('connected'));
-        room.on(RoomEvent.Reconnecting, () => showToast('reconnecting…'));
-        room.on(RoomEvent.Connected, () => { if (state.joined) showToast('reconnected'); });
-        room.on(RoomEvent.Disconnected, () => log('disconnected'));
-
-        // remote participant join/leave toasts
-        room.on(RoomEvent.ParticipantConnected, (p) => {
-          log('participant connected: ' + p.identity);
-          showToast(`${p.identity} joined`);
-        });
-        room.on(RoomEvent.ParticipantDisconnected, (p) => {
-          log('participant disconnected: ' + p.identity);
-          showToast(`${p.identity} left`);
-        });
-
-        room.on(RoomEvent.TrackSubscribed, (track, pub, p) => {
-          log('remote track subscribed: ' + pub.kind + ' from ' + p.identity);
-          attachRemoteTrack(track, pub, p);
-        });
-        room.on(RoomEvent.TrackUnsubscribed, () => {
-          const rv = $('remoteVideo'); if (rv) rv.srcObject = null;
-        });
-
-        const localTracks = await createLocalTracks({ audio: true, video: { facingMode: 'user', width: 960, frameRate: 24 } });
-        state.localTracks = localTracks;
-        previewLocal(localTracks);
-
-        await room.connect(state.livekitUrl, await token);
-        for (const t of localTracks) {
-          await room.localParticipant.publishTrack(t);
-        }
-
-        setUIState({ joined: true });
-        showToast(`joined: ${roomName}`);
-      }
-
-      async function leave() {
-        try {
-          if (state.room) await state.room.disconnect();
-          for (const t of state.localTracks) { try { t.stop(); } catch {} }
-        } finally {
-          state.room = null; state.localTracks = [];
-          $('localVideo').srcObject = null;
-          $('remoteVideo').srcObject = null;
-          if (state.remoteAudioEl) state.remoteAudioEl.srcObject = null;
-          setUIState({ joined: false, micOn: true, camOn: true });
-          showToast('left the room');
-        }
-      }
-
-      function toggleMic() {
-        const next = !state.micOn;
-        for (const t of state.localTracks) if (t.kind === 'audio') t.mediaStreamTrack.enabled = next;
-        setUIState({ micOn: next });
-      }
-
-      function toggleCam() {
-        const next = !state.camOn;
-        for (const t of state.localTracks) if (t.kind === 'video') t.mediaStreamTrack.enabled = next;
-        setUIState({ camOn: next });
-      }
-
-      // legacy wires
-      $('joinBtn').addEventListener('click', join);
-      $('leaveBtn').addEventListener('click', leave);
-      $('muteBtn').addEventListener('click',  toggleMic);
-      $('camBtn').addEventListener('click',   toggleCam);
-
-      // icon → legacy mapping + leave confirm
-      const overlay = $('confirmOverlay');
-      const confirmCancel = $('confirmCancel');
-      const confirmLeave  = $('confirmLeave');
-
-      icon.mute ?.addEventListener('click', () => $('muteBtn') ?.click());
-      icon.cam  ?.addEventListener('click', () => $('camBtn')  ?.click());
-      icon.leave?.addEventListener('click', () => openConfirm());
-
-      function openConfirm() {
-        if (!state.joined) return;
-        overlay.hidden = false;
-        overlay.classList.add('show');
-        confirmLeave.focus();
-        document.addEventListener('keydown', trapEsc, { once: true });
-        overlay.addEventListener('click', backdropClose);
-      }
-      function closeConfirm() {
-        overlay.classList.remove('show');
-        overlay.hidden = true;
-        overlay.removeEventListener('click', backdropClose);
-      }
-      function trapEsc(e) { if (e.key === 'Escape') closeConfirm(); }
-      function backdropClose(e) { if (e.target === overlay) closeConfirm(); }
-      confirmCancel.addEventListener('click', closeConfirm);
-      confirmLeave .addEventListener('click', () => { closeConfirm(); $('leaveBtn')?.click(); });
-
-      // Esc opens confirm (not a shortcut for mic/cam; just safety)
-      document.addEventListener('keydown', (e) => {
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        if (e.key === 'Escape') openConfirm();
-      });
-
-      // --- BFCache / tab lifecycle fixes ---
-      window.addEventListener('pagehide', () => { if (state.joined) { try { leave(); } catch {} } });
-      window.addEventListener('beforeunload', () => { if (state.joined) { try { leave(); } catch {} } });
-      window.addEventListener('pageshow', () => { setUIState({ joined: false, micOn: true, camOn: true }); });
-    </script>
+    <!-- external app script (post-split) -->
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

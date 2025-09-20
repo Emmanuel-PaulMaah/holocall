@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "livekit-server-sdk": "^2.0.0"
+    "livekit-server-sdk": "^2.13.3"
   }
 }
