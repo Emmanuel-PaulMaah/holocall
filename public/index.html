@@ -2,52 +2,62 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>HoloCall</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
-    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
   </head>
   <body>
     <h1>HoloCall</h1>
 
+    <!-- top controls -->
     <div class="row controls">
       <input id="room" placeholder="room name (e.g. arrakis)" autocomplete="off" />
       <input id="name" placeholder="your name" autocomplete="off" />
       <button id="joinBtn" class="primary">Join</button>
 
+      <!-- legacy buttons (hidden via CSS) for existing logic -->
       <button id="leaveBtn" class="legacy-btn" disabled>Leave</button>
       <button id="muteBtn"  class="legacy-btn" disabled>Mute Mic</button>
       <button id="camBtn"   class="legacy-btn" disabled>Camera Off</button>
     </div>
 
+    <!-- stage -->
     <div id="videos" aria-label="Call stage">
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo"  autoplay playsinline muted class="muted"></video>
 
+      <!-- floating bottom control bar -->
       <div class="control-bar" role="toolbar" aria-label="Call controls">
+        <!-- Mic -->
         <button id="muteIconBtn" class="icon-btn" aria-label="Toggle microphone" aria-pressed="true">
           <span class="visually-hidden">Mic</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+          </svg>
         </button>
+
+        <!-- Camera -->
         <button id="cameraIconBtn" class="icon-btn" aria-label="Toggle camera" aria-pressed="true">
           <span class="visually-hidden">Camera</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 4v-11l-4 4z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 10.5V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 4v-11l-4 4z"/>
+          </svg>
         </button>
+
+        <!-- Leave -->
         <button id="leaveIconBtn" class="icon-btn danger" aria-label="Leave call">
           <span class="visually-hidden">Leave</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 1 10.76 0l1.43.57a1 1 0 0 1 .6.92v3.12a1 1 0 0 1-1.38.93l-3.06-1.22a1 1 0 0 1-.62-.74L5 16.33a1 1 0 0 1-1.38-.93V12.28a1 1 0 0 1 .6-.92l1.43-.57z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.62 10.79a15.05 15.05 0 0 1 10.76 0l1.43.57a1 1 0 0 1 .6.92v3.12a1 1 0 0 1-1.38.93l-3.06-1.22a1 1 0 0 1-.62-.74L5 16.33a1 1 0 0 1-1.38-.93V12.28a1 1 0 0 1 .6-.92l1.43-.57z"/>
+          </svg>
         </button>
       </div>
 
-      <!-- holo mode button (hidden until remote present) -->
+      <!-- Holo Mode button (shows when remote present) -->
       <button id="holoBtn" class="holo-btn" hidden>Holo Mode</button>
 
+      <!-- leave confirmation overlay -->
       <div id="confirmOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
         <div class="overlay-card" role="document">
           <h2 id="confirmTitle">leave the room?</h2>
@@ -59,14 +69,19 @@
       </div>
     </div>
 
+    <!-- log (hidden by CSS) -->
     <pre id="log"></pre>
+
+    <!-- toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <!-- hidden video used as texture source for AR -->
+    <!-- video source for AR texture -->
     <video id="remoteHoloVideo" autoplay playsinline muted hidden></video>
 
+    <!-- AR exit button -->
     <button id="arClose" class="ar-close" hidden>&times;</button>
 
+    <!-- external app script -->
     <script type="module" src="/app.js"></script>
   </body>
 </html>
