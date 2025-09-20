@@ -108,11 +108,24 @@ button:disabled{opacity:.5;cursor:not-allowed}
   background:#000;
 }
 
-/* AR preview placeholder (for future overlay rendering) */
-#videos.ar-preview{
-  outline:2px dashed var(--accent);
-  outline-offset:-2px;
+/* ---- AR camera background ---- */
+.ar-bg{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  display:none;
+  z-index:0;
 }
+#videos.ar-on .ar-bg{ display:block; }
+#videos.ar-on #remoteVideo{
+  position:relative; z-index:1;
+  width:70%; height:70%;
+  margin:auto;
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+#videos.ar-on #localVideo{ bottom:96px; }
 
 /* bottom control bar */
 .control-bar{

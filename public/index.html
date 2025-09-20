@@ -30,6 +30,10 @@
 
     <!-- stage -->
     <div id="videos" aria-label="Call stage">
+      <!-- AR camera passthrough background (hidden until AR is enabled) -->
+      <video id="arBg" class="ar-bg" autoplay playsinline muted></video>
+
+      <!-- remote + local -->
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo"  autoplay playsinline muted class="muted"></video>
 
@@ -145,14 +149,42 @@
         }
       }
 
-      // AR prep stubs
-      function enableARPreview() {
-        $('videos')?.classList.add('ar-preview');
-        console.log('[AR] preview enabled');
+      // ---- AR stubs: camera passthrough background ----
+      let _arStream = null;
+
+      async function enableARPreview() {
+        try {
+          _arStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+          const ar = $('arBg');
+          if (ar) {
+            ar.srcObject = _arStream;
+            await ar.play().catch(()=>{});
+          }
+          $('videos')?.classList.add('ar-on');
+          showToast('AR preview on');
+          console.log('[AR] preview enabled');
+        } catch (e) {
+          console.error('[AR] failed to enable preview', e);
+          showToast('camera access failed');
+        }
       }
       function disableARPreview() {
-        $('videos')?.classList.remove('ar-preview');
-        console.log('[AR] preview disabled');
+        try {
+          if (_arStream) {
+            _arStream.getTracks().forEach(t => { try { t.stop(); } catch {} });
+            _arStream = null;
+          }
+          const ar = $('arBg');
+          if (ar) ar.srcObject = null;
+          $('videos')?.classList.remove('ar-on');
+          showToast('AR preview off');
+          console.log('[AR] preview disabled');
+        } catch (e) {
+          console.error('[AR] failed to disable preview', e);
+        }
       }
       window.enableARPreview = enableARPreview;
       window.disableARPreview = disableARPreview;
@@ -219,8 +251,10 @@
 
       async function join() {
         const roomName = $('room').value.trim();
-        const userName = $('name').value.trim() || ('web-' + Math.random().toString(36).slice(2));
-        if (!roomName) { alert('enter room name'); return; }
+        const userName = $('name').value.trim();
+
+        if (!roomName) { showToast('enter a room name'); $('room')?.focus(); return; }
+        if (!userName) { showToast('enter your name');  $('name')?.focus(); return; }
 
         await fetchConfig();
         const token = await getToken(roomName, userName);
@@ -249,9 +283,8 @@
           log('remote track subscribed: ' + pub.kind + ' from ' + p.identity);
           attachRemoteTrack(track, pub, p);
         });
-        room.on(RoomEvent.TrackUnsubscribed, (_t, pub, p) => {
-          log('remote track unsubscribed: ' + pub.kind + ' from ' + p.identity);
-          $('remoteVideo').srcObject = null;
+        room.on(RoomEvent.TrackUnsubscribed, () => {
+          const rv = $('remoteVideo'); if (rv) rv.srcObject = null;
         });
 
         const localTracks = await createLocalTracks({ audio: true, video: { facingMode: 'user', width: 960, frameRate: 24 } });
@@ -276,7 +309,7 @@
           $('localVideo').srcObject = null;
           $('remoteVideo').srcObject = null;
           if (state.remoteAudioEl) state.remoteAudioEl.srcObject = null;
-          setUIState({ joined: false });
+          setUIState({ joined: false, micOn: true, camOn: true });
           showToast('left the room');
         }
       }
@@ -293,19 +326,20 @@
         setUIState({ camOn: next });
       }
 
+      // legacy wires
       $('joinBtn').addEventListener('click', join);
       $('leaveBtn').addEventListener('click', leave);
-      $('muteBtn').addEventListener('click', toggleMic);
-      $('camBtn').addEventListener('click', toggleCam);
+      $('muteBtn').addEventListener('click',  toggleMic);
+      $('camBtn').addEventListener('click',   toggleCam);
+
+      // icon → legacy mapping + leave confirm
+      const overlay = $('confirmOverlay');
+      const confirmCancel = $('confirmCancel');
+      const confirmLeave  = $('confirmLeave');
 
       icon.mute ?.addEventListener('click', () => $('muteBtn') ?.click());
       icon.cam  ?.addEventListener('click', () => $('camBtn')  ?.click());
       icon.leave?.addEventListener('click', () => openConfirm());
-
-      // leave confirm overlay
-      const overlay = $('confirmOverlay');
-      const confirmCancel = $('confirmCancel');
-      const confirmLeave  = $('confirmLeave');
 
       function openConfirm() {
         if (!state.joined) return;
@@ -325,11 +359,17 @@
       confirmCancel.addEventListener('click', closeConfirm);
       confirmLeave .addEventListener('click', () => { closeConfirm(); $('leaveBtn')?.click(); });
 
+      // Esc opens confirm (not a shortcut for mic/cam; just safety)
       document.addEventListener('keydown', (e) => {
         const tag = document.activeElement?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         if (e.key === 'Escape') openConfirm();
       });
+
+      // --- BFCache / tab lifecycle fixes ---
+      window.addEventListener('pagehide', () => { if (state.joined) { try { leave(); } catch {} } });
+      window.addEventListener('beforeunload', () => { if (state.joined) { try { leave(); } catch {} } });
+      window.addEventListener('pageshow', () => { setUIState({ joined: false, micOn: true, camOn: true }); });
     </script>
   </body>
 </html>
