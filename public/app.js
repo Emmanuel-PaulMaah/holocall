@@ -34,26 +34,26 @@ function previewLocal(tracks){
   v.classList.remove('muted');
 }
 function attachRemoteTrack(track, pub){
-  if(pub.kind === 'video'){
+  if (pub.kind === 'video') {
+    // 1) attach to the visible <video id="remoteVideo">
     const rv = $('remoteVideo');
     ensureAttrs(rv);
     try { rv.srcObject = null; } catch {}
-    track.attach(rv);
+    track.attach(rv);           // LiveKit attaches MediaStreamTrack
 
-    // feed the hidden AR texture source and FORCE playback
+    // 2) attach to the hidden <video id="remoteHoloVideo"> used for AR texture
     const hv = $('remoteHoloVideo');
-    ensureAttrs(hv);               // playsinline/autoplay/muted attributes
-    hv.muted = true;               // allow autoplay on mobile
-    hv.srcObject = rv.srcObject;   // mirror the same MediaStream
-    // kick playback; ignore promise rejection (some browsers resolve later)
+    ensureAttrs(hv);
+    hv.muted = true;            // autoplay on mobile
+    try { hv.srcObject = null; } catch {}
+    track.attach(hv);           // <-- attach the same remote track directly
+    // force playback on mobile
     const tryPlay = () => hv.play().catch(() => {});
-    hv.addEventListener('loadeddata', tryPlay, { once: true });
-    hv.addEventListener('playing',    () => {}, { once: true });
-    // also try immediately (if track was already flowing)
-    tryPlay();
+    if (hv.readyState >= 2) tryPlay();
+    else hv.addEventListener('loadeddata', tryPlay, { once: true });
 
-  } else if(pub.kind === 'audio'){
-    if(!state.remoteAudioEl){
+  } else if (pub.kind === 'audio') {
+    if (!state.remoteAudioEl) {
       const a = document.createElement('audio');
       a.autoplay = true;
       a.style.display = 'none';
@@ -65,6 +65,7 @@ function attachRemoteTrack(track, pub){
     state.remoteAudioEl.play().catch(()=>{});
   }
 }
+
 
 
 /* ---------------- join / leave ---------------- */
@@ -264,6 +265,8 @@ function tryPlaceVideoPlane(){
   ensureReady().then(() => {
     const geom = new THREE.PlaneGeometry(1.5, 1.0);
     const texture = new THREE.VideoTexture(remoteVid);
+    texture.needsUpdate = true;   // force Three.js to refresh the texture
+
     // optional: slightly better sampling on phones
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
