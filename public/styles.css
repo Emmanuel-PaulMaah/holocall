@@ -35,6 +35,15 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .overlay-card{width:min(92vw,360px);background:#0e0e0e;border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .overlay-card h2{margin:0 0 12px;font-size:16px;font-weight:700;color:#fff}
 .overlay-actions{display:flex;gap:10px;justify-content:center;margin-top:8px}
+
+/* a11y utility (hide label text but keep for screen readers) */
+.visually-hidden{
+  position:absolute;
+  width:1px; height:1px;
+  margin:-1px; padding:0; border:0;
+  clip:rect(0 0 0 0);
+  overflow:hidden; white-space:nowrap;
+}
 .btn{padding:10px 14px;background:#161616;color:#fff;border:1px solid var(--border);border-radius:10px;cursor:pointer}
 .btn:hover{transform:translateY(-1px)}
 .btn.danger{background:var(--danger);border-color:var(--danger);color:#111}
