@@ -11,28 +11,20 @@ const icon = { mute:$('muteIconBtn'), cam:$('cameraIconBtn'), leave:$('leaveIcon
 const holoBtn = $('holoBtn'), arClose = $('arClose');
 
 /* ---------------- UI helpers ---------------- */
-function showToast(msg){
-  const t=$('toast'); if(!t) return;
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(showToast._t); showToast._t=setTimeout(()=>t.classList.remove('show'), 1800);
-}
-function setUIState({joined=state.joined, micOn=state.micOn, camOn=state.camOn}={}){
+function showToast(msg){ const t=$('toast'); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(()=>t.classList.remove('show'), 2000); }
+function setUIState({joined=state.joined, micOn=state.micOn, camOn=state.camOn}={}) {
   state.joined=joined; state.micOn=micOn; state.camOn=camOn;
-  setDisabled('joinBtn', joined); setDisabled('leaveBtn', !joined);
-  setDisabled('muteBtn', !joined); setDisabled('camBtn', !joined);
+  setDisabled('joinBtn', joined); setDisabled('leaveBtn', !joined); setDisabled('muteBtn', !joined); setDisabled('camBtn', !joined);
   if(icon.mute){ icon.mute.setAttribute('aria-pressed', String(micOn)); icon.mute.classList.toggle('is-muted', !micOn); }
   if(icon.cam){  icon.cam.setAttribute('aria-pressed', String(camOn));  icon.cam.classList.toggle('is-camoff', !camOn); }
 }
-function recalcHoloVisibility(){
-  const hasRemote = !!state.room && (state.room.remoteParticipants?.size||0)>0;
-  if(holoBtn) holoBtn.hidden = !(state.joined && hasRemote);
-}
+function recalcHoloVisibility(){ const hasRemote = !!state.room && (state.room.remoteParticipants?.size||0)>0; if(holoBtn) holoBtn.hidden = !(state.joined && hasRemote); }
 
-/* -------------- server helpers -------------- */
+/* ---------------- server helpers ---------------- */
 async function fetchConfig(){ const r=await fetch('/api/config',{cache:'no-store'}); const j=await r.json(); state.livekitUrl=j.livekitUrl; if(!state.livekitUrl) throw new Error('LIVEKIT_URL missing'); }
 async function getToken(room,user){ const r=await fetch(`/api/token?room=${encodeURIComponent(room)}&user=${encodeURIComponent(user)}`,{cache:'no-store'}); if(!r.ok) throw new Error('token fetch failed'); return r.text(); }
 
-/* -------------- media helpers -------------- */
+/* ---------------- media helpers ---------------- */
 function ensureAttrs(v){ v.muted=true; v.autoplay=true; v.playsInline=true; v.setAttribute('muted',''); v.setAttribute('autoplay',''); v.setAttribute('playsinline',''); }
 function previewLocal(tracks){
   const v=$('localVideo'); ensureAttrs(v); try{ v.srcObject=null; }catch{}
@@ -118,13 +110,27 @@ let renderer, scene, camera, reticle, videoPlane;
 let xrSession=null, refSpace=null, viewerSpace=null, hitTestSource=null;
 let onSelectRef=null;
 
+/* show / hide */
 if(holoBtn)  holoBtn.addEventListener('click', startHoloMode);
 if(arClose)  arClose.addEventListener('click', endHoloMode);
 
+/* capability */
 async function isARSupported(){
   if(!('xr' in navigator)) return { ok:false, why:'WebXR not available in this browser' };
   try{ return (await navigator.xr.isSessionSupported('immersive-ar')) ? {ok:true} : {ok:false, why:'immersive-AR not supported on this device'}; }
   catch(e){ return { ok:false, why: e?.message || 'XR support check failed' }; }
+}
+
+/* request a reference space with graceful fallback */
+async function requestRefSpace(session, preferred){
+  const order = preferred === 'local'
+    ? ['local','local-floor','bounded-floor','unbounded','viewer']
+    : ['viewer','local','local-floor','bounded-floor','unbounded'];
+  for(const type of order){
+    try { const space = await session.requestReferenceSpace(type); return {space, type}; }
+    catch(e){ /* try next */ }
+  }
+  return {space:null, type:null};
 }
 
 async function startHoloMode(){
@@ -132,16 +138,17 @@ async function startHoloMode(){
   if(!sup.ok){ showToast(sup.why); return; }
 
   try{
-    // request immersive AR (prefer hit-test + dom-overlay, fallback minimal)
-    let sessionInit = { requiredFeatures:['hit-test'], optionalFeatures:['dom-overlay'], domOverlay:{ root: document.body } };
+    // prefer hit-test + dom-overlay; fall back to minimal
+    let sessionInit = { requiredFeatures:['hit-test'], optionalFeatures:['dom-overlay','local-floor','bounded-floor','unbounded'], domOverlay:{ root: document.body } };
     try {
       xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
     } catch (e) {
       console.warn('[AR] request with hit-test/dom-overlay failed, retrying minimal:', e);
-      sessionInit = {}; xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+      sessionInit = {};
+      xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
     }
 
-    // renderer canvas
+    // renderer canvas (full-screen)
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -158,28 +165,49 @@ async function startHoloMode(){
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera();
 
-    // reticle (for hit-test path)
+    // reticle (used iff hit-test available)
     const ringGeo=new THREE.RingGeometry(0.05,0.06,32).rotateX(-Math.PI/2);
     const ringMat=new THREE.MeshBasicMaterial({ color:0x00ff00 });
     reticle=new THREE.Mesh(ringGeo,ringMat);
     reticle.matrixAutoUpdate=false; reticle.visible=false;
     scene.add(reticle);
 
-    // link session + spaces
+    // link session
     await renderer.xr.setSession(xrSession);
-    refSpace    = await xrSession.requestReferenceSpace('local');
-    viewerSpace = await xrSession.requestReferenceSpace('viewer');
 
-    // try to set up hit-test; soft-fail
-    try { hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace }); }
-    catch(e){ console.warn('[AR] hit-test not available; will use fixed-distance placement'); hitTestSource=null; }
+    // negotiate reference spaces
+    const localRS  = await requestRefSpace(xrSession, 'local');   // for stable world-space
+    const viewerRS = await requestRefSpace(xrSession, 'viewer');  // for hit-test
+    refSpace    = localRS.space || viewerRS.space;  // whatever we could get
+    viewerSpace = viewerRS.space || localRS.space;
 
-    // place video plane on XR "select" (works across devices)
+    if (!refSpace) {
+      showToast('no compatible reference space');
+      console.error('No ref space; tried types:', localRS.type, viewerRS.type);
+      await endHoloMode();
+      return;
+    }
+
+    // try to set up hit-test if viewer space exists
+    try {
+      if (viewerSpace && xrSession.requestHitTestSource) {
+        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+      } else {
+        hitTestSource = null;
+      }
+    } catch(e){
+      console.warn('[AR] hit-test init failed; using fallback placement', e);
+      hitTestSource = null;
+    }
+
+    // place video plane on XR "select"
     onSelectRef = ()=> tryPlaceVideoPlane();
     xrSession.addEventListener('select', onSelectRef);
 
     xrSession.addEventListener('end', ()=>{ cleanupXR(); });
 
+    console.log('[AR] refSpace:', localRS.type || viewerRS.type, 'viewerSpace:', viewerRS.type || localRS.type, 'hitTest:', !!hitTestSource);
+    showToast('AR ready — tap to place');
     renderer.setAnimationLoop(renderXR);
   }catch(e){
     console.error('[AR] start failed:', e);
@@ -190,12 +218,14 @@ async function startHoloMode(){
 function renderXR(_t, frame){
   if(!frame){ renderer?.render(scene,camera); return; }
 
-  if(hitTestSource){
+  if(hitTestSource && refSpace){
     const hits = frame.getHitTestResults(hitTestSource);
     if(hits.length){
       const hitPose = hits[0].getPose(refSpace);
-      reticle.visible=true;
-      reticle.matrix.fromArray(hitPose.transform.matrix);
+      if (hitPose) {
+        reticle.visible=true;
+        reticle.matrix.fromArray(hitPose.transform.matrix);
+      }
     }else{
       reticle.visible=false;
     }
@@ -219,7 +249,7 @@ function tryPlaceVideoPlane(){
     videoPlane.position.setFromMatrixPosition(m);
     videoPlane.quaternion.setFromRotationMatrix(m);
   }else{
-    // fallback: ~2m in front of XR camera
+    // fallback: ~2m straight ahead of XR camera
     const xrCam = renderer.xr.getCamera(camera);
     const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
     const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion).normalize();
@@ -243,10 +273,7 @@ function cleanupXR(){
   if(xrSession && onSelectRef){ try{ xrSession.removeEventListener('select', onSelectRef); }catch{} }
   onSelectRef=null;
 
-  if(renderer){
-    renderer.setAnimationLoop(null);
-    if(renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
-  }
+  if(renderer){ renderer.setAnimationLoop(null); if(renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
   renderer=scene=camera=reticle=videoPlane=null;
   xrSession=refSpace=viewerSpace=hitTestSource=null;
 }
