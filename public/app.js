@@ -36,7 +36,7 @@ async function getToken(room,user){ const r=await fetch(`/api/token?room=${encod
 function ensureAttrs(v){ v.muted=true; v.autoplay=true; v.playsInline=true; v.setAttribute('muted',''); v.setAttribute('autoplay',''); v.setAttribute('playsinline',''); }
 function previewLocal(tracks){
   const v=$('localVideo'); ensureAttrs(v); try{ v.srcObject=null; }catch{}
-  const vt = tracks.find(t=>t.kind==='video');
+  const vt=tracks.find(t=>t.kind==='video');
   if(vt && typeof vt.attach==='function'){ vt.attach(v); }
   else { const s=new MediaStream(tracks.map(t=>t.mediaStreamTrack)); v.srcObject=s; v.play().catch(()=>{}); }
   v.classList.remove('muted');
@@ -116,125 +116,114 @@ window.addEventListener('pageshow',     ()=>{ setUIState({ joined:false, micOn:t
 /* ================== Holo Mode (WebXR) ================== */
 let renderer, scene, camera, reticle, videoPlane;
 let xrSession=null, refSpace=null, viewerSpace=null, hitTestSource=null;
-let lastViewerMatrix = null; // for fallback placement
+let onSelectRef=null;
 
 if(holoBtn)  holoBtn.addEventListener('click', startHoloMode);
 if(arClose)  arClose.addEventListener('click', endHoloMode);
 
-/* Capability check */
 async function isARSupported(){
   if(!('xr' in navigator)) return { ok:false, why:'WebXR not available in this browser' };
-  try{ return (await navigator.xr.isSessionSupported('immersive-ar')) ? {ok:true} : {ok:false, why:'immersive‑AR not supported on this device'}; }
+  try{ return (await navigator.xr.isSessionSupported('immersive-ar')) ? {ok:true} : {ok:false, why:'immersive-AR not supported on this device'}; }
   catch(e){ return { ok:false, why: e?.message || 'XR support check failed' }; }
 }
 
-/* Start AR with hit‑test, fallback to no‑hit‑test */
 async function startHoloMode(){
   const sup = await isARSupported();
   if(!sup.ok){ showToast(sup.why); return; }
 
-  // try with hit‑test + dom overlay first
-  let sessionInit = {
-    requiredFeatures: ['hit-test'],
-    optionalFeatures: ['dom-overlay'],
-    domOverlay: { root: document.body }
-  };
-  try {
-    xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
-  } catch (e) {
-    console.warn('[AR] request with hit-test/dom-overlay failed, retrying without extras:', e);
-    // fallback: request minimal session
-    sessionInit = {};
-    xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+  try{
+    // request immersive AR (prefer hit-test + dom-overlay, fallback minimal)
+    let sessionInit = { requiredFeatures:['hit-test'], optionalFeatures:['dom-overlay'], domOverlay:{ root: document.body } };
+    try {
+      xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+    } catch (e) {
+      console.warn('[AR] request with hit-test/dom-overlay failed, retrying minimal:', e);
+      sessionInit = {}; xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+    }
+
+    // renderer canvas
+    renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    renderer.domElement.classList.add('ar-layer');
+    document.body.appendChild(renderer.domElement);
+
+    // takeover UI
+    document.body.classList.add('ar-active');
+    holoBtn.hidden = true;
+    arClose.hidden = false;
+
+    // scene/camera
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera();
+
+    // reticle (for hit-test path)
+    const ringGeo=new THREE.RingGeometry(0.05,0.06,32).rotateX(-Math.PI/2);
+    const ringMat=new THREE.MeshBasicMaterial({ color:0x00ff00 });
+    reticle=new THREE.Mesh(ringGeo,ringMat);
+    reticle.matrixAutoUpdate=false; reticle.visible=false;
+    scene.add(reticle);
+
+    // link session + spaces
+    await renderer.xr.setSession(xrSession);
+    refSpace    = await xrSession.requestReferenceSpace('local');
+    viewerSpace = await xrSession.requestReferenceSpace('viewer');
+
+    // try to set up hit-test; soft-fail
+    try { hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace }); }
+    catch(e){ console.warn('[AR] hit-test not available; will use fixed-distance placement'); hitTestSource=null; }
+
+    // place video plane on XR "select" (works across devices)
+    onSelectRef = ()=> tryPlaceVideoPlane();
+    xrSession.addEventListener('select', onSelectRef);
+
+    xrSession.addEventListener('end', ()=>{ cleanupXR(); });
+
+    renderer.setAnimationLoop(renderXR);
+  }catch(e){
+    console.error('[AR] start failed:', e);
+    showToast(e?.message || e?.name || 'AR start failed');
   }
-
-  // renderer
-  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.xr.enabled = true;
-  document.body.appendChild(renderer.domElement);
-
-  // scene/camera
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera();
-
-  // reticle (only used if hit‑test is available)
-  const ringGeo = new THREE.RingGeometry(0.05,0.06,32).rotateX(-Math.PI/2);
-  const ringMat = new THREE.MeshBasicMaterial({ color:0x00ff00 });
-  reticle = new THREE.Mesh(ringGeo, ringMat);
-  reticle.matrixAutoUpdate = false; reticle.visible = false;
-  scene.add(reticle);
-
-  // link session
-  await renderer.xr.setSession(xrSession);
-
-  // spaces
-  refSpace    = await xrSession.requestReferenceSpace('local');
-  viewerSpace = await xrSession.requestReferenceSpace('viewer');
-
-  // try creating hit‑test source; if it fails, we still proceed (fallback)
-  try { hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace }); }
-  catch(e){ console.warn('[AR] hit-test not available; will use fixed-distance placement'); hitTestSource = null; }
-
-  // place on XR "select" (works even without dom overlay)
-  const onSelect = ()=> tryPlaceVideoPlane();
-  xrSession.addEventListener('select', onSelect);
-
-  // exit handling
-  arClose.hidden = false;
-  xrSession.addEventListener('end', ()=>{ arClose.hidden=true; cleanupXR(); });
-
-  // run
-  renderer.setAnimationLoop(renderXR);
 }
 
-/* per-frame: update reticle (if hit‑test), remember viewer pose for fallback */
 function renderXR(_t, frame){
   if(!frame){ renderer?.render(scene,camera); return; }
 
-  // remember viewer pose
-  const pose = frame.getViewerPose(refSpace);
-  if (pose) lastViewerMatrix = pose.transform.matrix;
-
-  // hit‑test → update reticle
   if(hitTestSource){
     const hits = frame.getHitTestResults(hitTestSource);
     if(hits.length){
       const hitPose = hits[0].getPose(refSpace);
-      reticle.visible = true;
+      reticle.visible=true;
       reticle.matrix.fromArray(hitPose.transform.matrix);
-    } else {
-      reticle.visible = false;
+    }else{
+      reticle.visible=false;
     }
   }
 
   renderer.render(scene,camera);
 }
 
-/* place remote video plane at reticle or ~2m in front as fallback */
 function tryPlaceVideoPlane(){
-  if(videoPlane) return; // only place once
-
-  const remoteVid = $('remoteHoloVideo');
+  if(videoPlane) return;
+  const remoteVid=$('remoteHoloVideo');
   if(!remoteVid.srcObject){ showToast('remote video not ready'); return; }
 
-  const geom = new THREE.PlaneGeometry(1.5, 1.0);
-  const texture = new THREE.VideoTexture(remoteVid);
-  const mat = new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
-  videoPlane = new THREE.Mesh(geom, mat);
+  const geom=new THREE.PlaneGeometry(1.5,1.0);
+  const texture=new THREE.VideoTexture(remoteVid);
+  const mat=new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
+  videoPlane=new THREE.Mesh(geom,mat);
 
-  if (hitTestSource && reticle?.visible){
-    // anchor at reticle
-    const m = new THREE.Matrix4(); m.copy(reticle.matrix);
+  if(hitTestSource && reticle?.visible){
+    const m=new THREE.Matrix4(); m.copy(reticle.matrix);
     videoPlane.position.setFromMatrixPosition(m);
     videoPlane.quaternion.setFromRotationMatrix(m);
-  } else {
-    // fallback: 2m in front of the viewer, facing the camera
-    const xrCam = renderer.xr.getCamera(camera); // WebXR camera
+  }else{
+    // fallback: ~2m in front of XR camera
+    const xrCam = renderer.xr.getCamera(camera);
     const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
     const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion).normalize();
-    const pos = camPos.clone().add(forward.multiplyScalar(2.0)); // 2 meters out
+    const pos = camPos.clone().add(forward.multiplyScalar(2.0));
     videoPlane.position.copy(pos);
     videoPlane.lookAt(camPos);
   }
@@ -243,8 +232,21 @@ function tryPlaceVideoPlane(){
 }
 
 async function endHoloMode(){ try{ await xrSession?.end(); }catch{} cleanupXR(); }
+
 function cleanupXR(){
-  if(renderer){ renderer.setAnimationLoop(null); if(renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
+  // restore UI
+  document.body.classList.remove('ar-active');
+  holoBtn.hidden = false;
+  arClose.hidden = true;
+
+  // XR plumbing
+  if(xrSession && onSelectRef){ try{ xrSession.removeEventListener('select', onSelectRef); }catch{} }
+  onSelectRef=null;
+
+  if(renderer){
+    renderer.setAnimationLoop(null);
+    if(renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+  }
   renderer=scene=camera=reticle=videoPlane=null;
   xrSession=refSpace=viewerSpace=hitTestSource=null;
 }
