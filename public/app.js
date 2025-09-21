@@ -33,21 +33,23 @@ function previewLocal(tracks){
   else { const s=new MediaStream(tracks.map(t=>t.mediaStreamTrack)); v.srcObject=s; v.play().catch(()=>{}); }
   v.classList.remove('muted');
 }
+
 function attachRemoteTrack(track, pub){
   if (pub.kind === 'video') {
-    // 1) attach to the visible <video id="remoteVideo">
+    // attach to visible remote <video>
     const rv = $('remoteVideo');
     ensureAttrs(rv);
     try { rv.srcObject = null; } catch {}
-    track.attach(rv);           // LiveKit attaches MediaStreamTrack
+    track.attach(rv);
 
-    // 2) attach to the hidden <video id="remoteHoloVideo"> used for AR texture
+    // attach the same LiveKit track directly to the hidden AR <video>
     const hv = $('remoteHoloVideo');
     ensureAttrs(hv);
-    hv.muted = true;            // autoplay on mobile
+    hv.muted = true;            // allow autoplay on mobile
     try { hv.srcObject = null; } catch {}
-    track.attach(hv);           // <-- attach the same remote track directly
-    // force playback on mobile
+    track.attach(hv);
+
+    // force playback so frames flow
     const tryPlay = () => hv.play().catch(() => {});
     if (hv.readyState >= 2) tryPlay();
     else hv.addEventListener('loadeddata', tryPlay, { once: true });
@@ -65,8 +67,6 @@ function attachRemoteTrack(track, pub){
     state.remoteAudioEl.play().catch(()=>{});
   }
 }
-
-
 
 /* ---------------- join / leave ---------------- */
 async function join(){
@@ -242,40 +242,63 @@ function renderXR(_t, frame){
   renderer.render(scene,camera);
 }
 
+// Drive a VideoTexture so it updates every frame on Android.
+// Uses requestVideoFrameCallback when available, falls back to a timer.
+function createVideoTextureWithUpdates(video) {
+  const tex = new THREE.VideoTexture(video);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+
+  // rVFC path (best)
+  const hasRVFC = typeof video.requestVideoFrameCallback === 'function';
+  if (hasRVFC) {
+    const tick = () => {
+      tex.needsUpdate = true;                 // upload latest frame
+      try { video.requestVideoFrameCallback(tick); } catch {}
+    };
+    try { video.requestVideoFrameCallback(tick); } catch {}
+  } else {
+    // fallback timer ~30fps
+    const iv = setInterval(() => { tex.needsUpdate = true; }, 33);
+    // cleanup when we dispose the texture
+    const oldDispose = tex.dispose.bind(tex);
+    tex.dispose = () => { clearInterval(iv); oldDispose(); };
+  }
+
+  return tex;
+}
+
+
 function tryPlaceVideoPlane(){
-  if(videoPlane) return;
+  if (videoPlane) return;
 
   const remoteVid = $('remoteHoloVideo');
-  if(!remoteVid.srcObject){
+  if (!remoteVid.srcObject) {
     showToast('remote video not ready');
     return;
   }
 
-  // helper: wait until the hidden video has decodable frames
+  // wait until the hidden video has decodable frames
   const ensureReady = () => {
-    if (remoteVid.readyState >= 2) return Promise.resolve();
+    if (remoteVid.readyState >= 2 && remoteVid.videoWidth > 0 && remoteVid.videoHeight > 0) return Promise.resolve();
     return new Promise(resolve => {
-      const onReady = () => { remoteVid.removeEventListener('loadeddata', onReady); resolve(); };
+      const onReady = () => {
+        remoteVid.removeEventListener('loadeddata', onReady);
+        resolve();
+      };
       remoteVid.addEventListener('loadeddata', onReady, { once: true });
-      // also try to play again (android)
       remoteVid.play().catch(()=>{});
     });
   };
 
   ensureReady().then(() => {
     const geom = new THREE.PlaneGeometry(1.5, 1.0);
-    const texture = new THREE.VideoTexture(remoteVid);
-    texture.needsUpdate = true;   // force Three.js to refresh the texture
-
-    // optional: slightly better sampling on phones
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.generateMipmaps = false;
-
-    const mat = new THREE.MeshBasicMaterial({ map:texture, side:THREE.DoubleSide });
+    const texture = createVideoTextureWithUpdates(remoteVid);  // <<< use helper
+    const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     videoPlane = new THREE.Mesh(geom, mat);
 
-    if(hitTestSource && reticle?.visible){
+    if (hitTestSource && reticle?.visible) {
       const m = new THREE.Matrix4(); m.copy(reticle.matrix);
       videoPlane.position.setFromMatrixPosition(m);
       videoPlane.quaternion.setFromRotationMatrix(m);
@@ -292,6 +315,7 @@ function tryPlaceVideoPlane(){
     scene.add(videoPlane);
   });
 }
+
 
 
 async function endHoloMode(){ try{ await xrSession?.end(); }catch{} cleanupXR(); }
