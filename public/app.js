@@ -25,7 +25,43 @@ async function fetchConfig(){ const r=await fetch('/api/config',{cache:'no-store
 async function getToken(room,user){ const r=await fetch(`/api/token?room=${encodeURIComponent(room)}&user=${encodeURIComponent(user)}`,{cache:'no-store'}); if(!r.ok) throw new Error('token fetch failed'); return r.text(); }
 
 /* ---------------- media helpers ---------------- */
-function ensureAttrs(v){ v.muted=true; v.autoplay=true; v.playsInline=true; v.setAttribute('muted',''); v.setAttribute('autoplay',''); v.setAttribute('playsinline',''); }
+function ensureAttrs(v){ v.muted = true; v.autoplay = true; v.playsInline = true;
+  v.setAttribute('muted',''); v.setAttribute('autoplay',''); v.setAttribute('playsinline',''); }
+
+/** On some Android builds, fully hidden videos won’t decode. Make it tiny-but-visible. */
+function makeVideoTinyVisible(v){
+  if (!v) return;
+  v.removeAttribute('hidden');
+  v.style.position = 'fixed';
+  v.style.left = '0';
+  v.style.top = '0';
+  v.style.width = '2px';
+  v.style.height = '2px';
+  v.style.opacity = '0.001';
+  v.style.pointerEvents = 'none';
+  v.style.zIndex = '0';
+  ensureAttrs(v);
+  v.muted = true;
+}
+
+/** Drive a VideoTexture so it updates every frame. */
+function createVideoTextureWithUpdates(video){
+  const tex = new THREE.VideoTexture(video);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+
+  if (typeof video.requestVideoFrameCallback === 'function'){
+    const tick = () => { tex.needsUpdate = true; try { video.requestVideoFrameCallback(tick); } catch {} };
+    try { video.requestVideoFrameCallback(tick); } catch {}
+  } else {
+    const iv = setInterval(() => { tex.needsUpdate = true; }, 33); // ~30fps
+    const oldDispose = tex.dispose.bind(tex);
+    tex.dispose = () => { clearInterval(iv); oldDispose(); };
+  }
+  return tex;
+}
+
 function previewLocal(tracks){
   const v=$('localVideo'); ensureAttrs(v); try{ v.srcObject=null; }catch{}
   const vt=tracks.find(t=>t.kind==='video');
@@ -34,33 +70,29 @@ function previewLocal(tracks){
   v.classList.remove('muted');
 }
 
-function attachRemoteTrack(track, pub){
+function attachRemoteTrack(track,pub){
   if (pub.kind === 'video') {
-    // attach to visible remote <video>
+    // visible remote video
     const rv = $('remoteVideo');
     ensureAttrs(rv);
     try { rv.srcObject = null; } catch {}
     track.attach(rv);
 
-    // attach the same LiveKit track directly to the hidden AR <video>
+    // hidden-but-visible AR source
     const hv = $('remoteHoloVideo');
-    ensureAttrs(hv);
-    hv.muted = true;            // allow autoplay on mobile
+    makeVideoTinyVisible(hv);
     try { hv.srcObject = null; } catch {}
     track.attach(hv);
 
-    // force playback so frames flow
+    // force playback (autoplay on mobile)
     const tryPlay = () => hv.play().catch(() => {});
     if (hv.readyState >= 2) tryPlay();
     else hv.addEventListener('loadeddata', tryPlay, { once: true });
 
   } else if (pub.kind === 'audio') {
     if (!state.remoteAudioEl) {
-      const a = document.createElement('audio');
-      a.autoplay = true;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      state.remoteAudioEl = a;
+      const a = document.createElement('audio'); a.autoplay = true; a.style.display = 'none';
+      document.body.appendChild(a); state.remoteAudioEl = a;
     }
     track.attach(state.remoteAudioEl);
     state.remoteAudioEl.muted = false;
@@ -99,7 +131,8 @@ async function leave(){
   finally{
     state.room=null; state.localTracks=[];
     const lv=$('localVideo'), rv=$('remoteVideo'), hv=$('remoteHoloVideo');
-    if(lv) lv.srcObject=null; if(rv) rv.srcObject=null; if(hv) hv.srcObject=null;
+    if(lv) lv.srcObject=null; if(rv) rv.srcObject=null;
+    if(hv){ hv.pause(); hv.srcObject=null; hv.setAttribute('hidden',''); hv.removeAttribute('style'); }
     if(state.remoteAudioEl) state.remoteAudioEl.srcObject=null;
     setUIState({ joined:false, micOn:true, camOn:true }); recalcHoloVisibility(); showToast('left the room');
   }
@@ -135,7 +168,6 @@ let renderer, scene, camera, reticle, videoPlane;
 let xrSession=null, refSpace=null, viewerSpace=null, hitTestSource=null;
 let onSelectRef=null;
 
-/* capability */
 async function isARSupported(){
   if(!('xr' in navigator)) return { ok:false, why:'WebXR not available in this browser' };
   try{ return (await navigator.xr.isSessionSupported('immersive-ar')) ? {ok:true} : {ok:false, why:'immersive-AR not supported on this device'}; }
@@ -176,6 +208,11 @@ async function startHoloMode(){
     document.body.classList.add('ar-active');
     holoBtn.hidden = true; arClose.hidden = false;
 
+    // make sure AR video source is visible + playing (even if track attached earlier)
+    const hv = $('remoteHoloVideo');
+    makeVideoTinyVisible(hv);
+    try { hv.play().catch(()=>{}); } catch {}
+
     // scene/camera
     scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera();
 
@@ -188,20 +225,17 @@ async function startHoloMode(){
     // link session
     await renderer.xr.setSession(xrSession);
 
-    // try to get a world-ish space; if none, fall back to renderer's default then viewer
+    // try to get a world-ish space; fallback to renderer default then viewer
     let got = await requestRefSpace(xrSession, ['local','local-floor','bounded-floor','unbounded']);
     if (!got.space) {
-      // renderer may supply a default reference space
       got.space = renderer.xr.getReferenceSpace?.() || null;
       got.type  = got.space ? 'renderer-default' : null;
     }
     if (!got.space) {
-      // last resort: pure viewer
       const viewerTry = await requestRefSpace(xrSession, ['viewer']);
       got = viewerTry.space ? viewerTry : got;
     }
     refSpace = got.space;
-    // now try to get a true viewer space (for hit-test); if not, we’ll skip hit-test
     const viewerTry = await requestRefSpace(xrSession, ['viewer']);
     viewerSpace = viewerTry.space || null;
 
@@ -232,6 +266,7 @@ async function startHoloMode(){
 
 function renderXR(_t, frame){
   if(!frame){ renderer?.render(scene,camera); return; }
+
   if(hitTestSource && refSpace){
     const hits = frame.getHitTestResults(hitTestSource);
     if(hits.length){
@@ -239,36 +274,14 @@ function renderXR(_t, frame){
       if (pose) { reticle.visible=true; reticle.matrix.fromArray(pose.transform.matrix); }
     } else { reticle.visible=false; }
   }
-  renderer.render(scene,camera);
-}
 
-// Drive a VideoTexture so it updates every frame on Android.
-// Uses requestVideoFrameCallback when available, falls back to a timer.
-function createVideoTextureWithUpdates(video) {
-  const tex = new THREE.VideoTexture(video);
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  tex.generateMipmaps = false;
-
-  // rVFC path (best)
-  const hasRVFC = typeof video.requestVideoFrameCallback === 'function';
-  if (hasRVFC) {
-    const tick = () => {
-      tex.needsUpdate = true;                 // upload latest frame
-      try { video.requestVideoFrameCallback(tick); } catch {}
-    };
-    try { video.requestVideoFrameCallback(tick); } catch {}
-  } else {
-    // fallback timer ~30fps
-    const iv = setInterval(() => { tex.needsUpdate = true; }, 33);
-    // cleanup when we dispose the texture
-    const oldDispose = tex.dispose.bind(tex);
-    tex.dispose = () => { clearInterval(iv); oldDispose(); };
+  // Ensure the texture uploads every XR frame (extra safety on Android)
+  if (videoPlane && videoPlane.material && videoPlane.material.map) {
+    videoPlane.material.map.needsUpdate = true;
   }
 
-  return tex;
+  renderer.render(scene,camera);
 }
-
 
 function tryPlaceVideoPlane(){
   if (videoPlane) return;
@@ -283,10 +296,7 @@ function tryPlaceVideoPlane(){
   const ensureReady = () => {
     if (remoteVid.readyState >= 2 && remoteVid.videoWidth > 0 && remoteVid.videoHeight > 0) return Promise.resolve();
     return new Promise(resolve => {
-      const onReady = () => {
-        remoteVid.removeEventListener('loadeddata', onReady);
-        resolve();
-      };
+      const onReady = () => { remoteVid.removeEventListener('loadeddata', onReady); resolve(); };
       remoteVid.addEventListener('loadeddata', onReady, { once: true });
       remoteVid.play().catch(()=>{});
     });
@@ -294,7 +304,7 @@ function tryPlaceVideoPlane(){
 
   ensureReady().then(() => {
     const geom = new THREE.PlaneGeometry(1.5, 1.0);
-    const texture = createVideoTextureWithUpdates(remoteVid);  // <<< use helper
+    const texture = createVideoTextureWithUpdates(remoteVid);
     const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     videoPlane = new THREE.Mesh(geom, mat);
 
@@ -303,7 +313,7 @@ function tryPlaceVideoPlane(){
       videoPlane.position.setFromMatrixPosition(m);
       videoPlane.quaternion.setFromRotationMatrix(m);
     } else {
-      // fallback: ~2m in front of XR camera
+      // fallback: 2m in front of XR camera
       const xrCam = renderer.xr.getCamera(camera);
       const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
       const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion).normalize();
@@ -316,14 +326,17 @@ function tryPlaceVideoPlane(){
   });
 }
 
-
-
 async function endHoloMode(){ try{ await xrSession?.end(); }catch{} cleanupXR(); }
 function cleanupXR(){
   document.body.classList.remove('ar-active');
   holoBtn.hidden = false; arClose.hidden = true;
+
+  const hv = $('remoteHoloVideo');
+  if (hv) { hv.setAttribute('hidden',''); hv.removeAttribute('style'); }
+
   if(xrSession && onSelectRef){ try{ xrSession.removeEventListener('select', onSelectRef); }catch{} }
   onSelectRef=null;
+
   if(renderer){ renderer.setAnimationLoop(null); if(renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
   renderer=scene=camera=reticle=videoPlane=null;
   xrSession=refSpace=viewerSpace=hitTestSource=null;
