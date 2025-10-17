@@ -152,3 +152,83 @@ if (signupForm) {
     }
   });
 }
+
+const forgotPasswordForm = $('forgotPasswordForm');
+if (forgotPasswordForm) {
+  forgotPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+    
+    const successEl = $('success');
+    if (successEl) successEl.style.display = 'none';
+    
+    const email = $('email').value.trim();
+    const btn = $('resetBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    
+    try {
+      await initSupabase();
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password.html`,
+      });
+      
+      if (error) throw error;
+      
+      if (successEl) {
+        successEl.textContent = 'Password reset email sent! Check your inbox.';
+        successEl.style.display = 'block';
+      }
+      $('email').value = '';
+      btn.textContent = 'Send Reset Link';
+    } catch (err) {
+      showError(err.message || 'Failed to send reset email');
+      btn.textContent = 'Send Reset Link';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+const updatePasswordForm = $('updatePasswordForm');
+if (updatePasswordForm) {
+  updatePasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+    
+    const newPassword = $('newPassword').value;
+    const confirmPassword = $('confirmPassword').value;
+    
+    if (newPassword.length < 6) {
+      showError('Password must be at least 6 characters');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      showError('Passwords do not match');
+      return;
+    }
+    
+    const btn = $('updateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+    
+    try {
+      await initSupabase();
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      showToast('Password updated successfully!');
+      setTimeout(() => window.location.href = '/login.html', 1000);
+    } catch (err) {
+      showError(err.message || 'Failed to update password');
+      btn.disabled = false;
+      btn.textContent = 'Update Password';
+    }
+  });
+}

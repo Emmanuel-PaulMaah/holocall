@@ -22,6 +22,8 @@ HoloCall is a web-based international video calling app built on LiveKit with We
   /index.html    - Main video call UI
   /login.html    - Login page
   /signup.html   - Signup page
+  /forgot-password.html - Password reset request page
+  /update-password.html - New password entry page
   /app.js        - Main orchestrator (coordinates modules)
   /ui-controller.js      - UI state management and DOM updates
   /connection-manager.js - LiveKit connection logic
@@ -53,6 +55,7 @@ The following secrets must be set in Replit Secrets:
 
 ### Current Features
 - 🔐 **User Authentication** - Login/signup with Supabase Auth
+- 🔑 **Password Reset** - Self-service password recovery via email
 - 🌍 **International video calls** - Via LiveKit's global SFU
 - 🎥 **Real-time video + audio** - Streaming between authenticated users
 - 📱 **Cross-device support** - Desktop + mobile browsers
@@ -85,9 +88,11 @@ The server automatically starts via Replit workflow on port 5000.
 ### Authentication Flow
 1. Unauthenticated users are redirected to `/login.html`
 2. Users can sign up or login via Supabase Auth
-3. On successful auth, a session cookie is created (7-day expiry)
-4. Session cookies are HTTP-only and secured in production
-5. Protected API endpoints verify session before granting access
+3. Forgot password? Users can request a password reset email at `/forgot-password.html`
+4. Password reset email contains a magic link to `/update-password.html`
+5. On successful auth, a session cookie is created (7-day expiry)
+6. Session cookies are HTTP-only and secured in production
+7. Protected API endpoints verify session before granting access
 
 ## Deployment
 The app is configured for Replit Autoscale deployment:
@@ -152,6 +157,16 @@ The app is configured for Replit Autoscale deployment:
 - **Async initialization** - Added `init()` function that awaits auth check before setting up event listeners
 - **Custom domain support** - Works correctly on holocall.replit.app, holocall.vercel.app, and all Replit/Vercel domains
 - **No UI flash** - Users no longer see the Join button before being redirected
+
+### Password Reset Feature (Oct 17, 2025)
+- **Self-service password recovery** - Users can reset their password via email without admin intervention
+- **Forgot password page** - `/forgot-password.html` allows users to request password reset
+- **Secure reset flow** - Supabase sends magic link to user's email with temporary access token
+- **Update password page** - `/update-password.html` allows setting new password after email verification
+- **Password validation** - Minimum 6 characters, password confirmation matching
+- **Improved UX** - "Forgotten password" link prominently displayed on login page
+- **Account recovery** - Users can regain access to locked or unconfirmed accounts
+- **Success feedback** - Clear visual confirmation when reset email is sent and password is updated
 
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
