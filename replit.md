@@ -113,6 +113,16 @@ The app is configured for Replit Autoscale deployment:
 - Removed manual username input (now uses authenticated user's name)
 - Enhanced security with protected API endpoints
 
+### Security Hardening
+- Fixed critical CORS vulnerability - replaced wildcard origin with validated allowlist
+- CORS validates all domains against trusted Replit suffixes (.replit.dev, .repl.co)
+- Production: HTTPS-only for Replit domains (prevents downgrade attacks)
+- Development: HTTP localhost allowed only when NODE_ENV is not 'production'
+- Domain validation prevents environment variable poisoning attacks
+- Untrusted domains are logged and rejected
+- Added JWT_SECRET enforcement at startup to prevent token forgery
+- Implemented automatic token refresh for 7-day session persistence
+
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
 - AR features require HTTPS and AR-capable devices (most modern smartphones)

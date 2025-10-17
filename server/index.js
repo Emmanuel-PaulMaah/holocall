@@ -6,7 +6,47 @@ import { AccessToken } from 'livekit-server-sdk';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
-app.use(cors({ credentials: true, origin: true }));
+
+const allowedOrigins = [];
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!isProduction) {
+  allowedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
+}
+
+const TRUSTED_REPLIT_SUFFIXES = ['.replit.dev', '.repl.co'];
+
+function isValidReplitDomain(domain) {
+  return TRUSTED_REPLIT_SUFFIXES.some(suffix => domain.endsWith(suffix));
+}
+
+if (process.env.REPLIT_DOMAINS) {
+  process.env.REPLIT_DOMAINS.split(',').forEach(domain => {
+    const trimmed = domain.trim();
+    if (isValidReplitDomain(trimmed)) {
+      allowedOrigins.push(`https://${trimmed}`);
+    } else {
+      console.warn(`Rejected untrusted domain: ${trimmed}`);
+    }
+  });
+}
+
+if (process.env.REPLIT_DEV_DOMAIN && isValidReplitDomain(process.env.REPLIT_DEV_DOMAIN)) {
+  allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+}
+
+app.use(cors({ 
+  credentials: true, 
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS blocked origin: ${origin}`);
+      console.error(`Allowed origins:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
 app.use(cookieParser());
 
