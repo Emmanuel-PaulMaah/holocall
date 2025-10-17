@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { AccessToken } from 'livekit-server-sdk';
@@ -15,7 +14,7 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // simple config endpoint for the client (safe to expose)
-app.get('/config', (req, res) => {
+app.get('/api/config', (req, res) => {
   res.json({ livekitUrl: process.env.LIVEKIT_URL || '' });
 });
 
@@ -44,7 +43,7 @@ app.get('/api/token', async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`✅ server running on http://localhost:${port}`);
+const port = process.env.PORT || 5000;
+app.listen(port, '0.0.0.0', () => {
+  console.log(`✅ server running on http://0.0.0.0:${port}`);
 });
