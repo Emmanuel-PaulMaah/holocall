@@ -7,16 +7,43 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------------- server helpers ---------------- */
 async function fetchConfig() { 
-  const r = await fetch('/api/config', {cache: 'no-store'}); 
-  const j = await r.json(); 
-  state.livekitUrl = j.livekitUrl; 
-  if (!state.livekitUrl) throw new Error('LIVEKIT_URL missing'); 
+  try {
+    const r = await fetch('/api/config', {cache: 'no-store'}); 
+    if (!r.ok) {
+      throw new Error(`Config fetch failed: ${r.status}`);
+    }
+    const j = await r.json(); 
+    state.livekitUrl = j.livekitUrl; 
+    if (!state.livekitUrl) throw new Error('LIVEKIT_URL not configured'); 
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message.includes('fetch')) {
+      throw new Error('Network error - check your connection');
+    }
+    throw err;
+  }
 }
 
 async function getToken(room) { 
-  const r = await fetch(`/api/token?room=${encodeURIComponent(room)}`, {cache: 'no-store', credentials: 'include'}); 
-  if (!r.ok) throw new Error('token fetch failed'); 
-  return r.text(); 
+  try {
+    const r = await fetch(`/api/token?room=${encodeURIComponent(room)}`, {cache: 'no-store', credentials: 'include'}); 
+    
+    if (r.status === 401) {
+      throw new Error('Session expired - please login again');
+    }
+    if (r.status === 403) {
+      throw new Error('Access denied - check your permissions');
+    }
+    if (!r.ok) {
+      throw new Error(`Server error (${r.status})`);
+    }
+    
+    return r.text();
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message.includes('fetch')) {
+      throw new Error('Network error - check your connection');
+    }
+    throw err;
+  }
 }
 
 /* ---------------- media helpers ---------------- */
@@ -103,42 +130,150 @@ export async function join() {
     return; 
   }
 
-  await fetchConfig(); 
-  const token = await getToken(room);
-  setLogLevel('warn'); 
-  state.room = new Room({ adaptiveStream: true, dynacast: true });
+  try {
+    // Fetch config and token
+    await fetchConfig(); 
+    const token = await getToken(room);
+    
+    setLogLevel('warn'); 
+    state.room = new Room({ adaptiveStream: true, dynacast: true });
 
-  state.room.on(RoomEvent.Reconnecting, () => showToast('reconnecting…'));
-  state.room.on(RoomEvent.Connected, () => { if (state.joined) showToast('reconnected'); });
+    // Setup room event listeners with reconnection tracking
+    let reconnectAttempt = 0;
+    
+    state.room.on(RoomEvent.Reconnecting, () => {
+      reconnectAttempt++;
+      if (reconnectAttempt === 1) {
+        showToast('reconnecting…');
+      } else {
+        showToast(`reconnecting (attempt ${reconnectAttempt})…`);
+      }
+    });
+    
+    state.room.on(RoomEvent.Reconnected, () => { 
+      reconnectAttempt = 0;
+      showToast('reconnected ✓'); 
+    });
+    
+    state.room.on(RoomEvent.Connected, () => { 
+      if (state.joined && reconnectAttempt > 0) {
+        reconnectAttempt = 0;
+        showToast('reconnected ✓');
+      }
+    });
+    
+    state.room.on(RoomEvent.Disconnected, (reason) => {
+      if (state.joined) {
+        const reasonText = reason === 'server_shutdown' 
+          ? 'Server restarted' 
+          : reason === 'network_timeout'
+          ? 'Network timeout'
+          : 'Connection lost';
+        showToast(`${reasonText} - please rejoin`);
+        cleanup();
+      }
+    });
 
-  state.room.on(RoomEvent.ParticipantConnected, (p) => { 
-    showToast(`${p.identity} joined`);  
-    recalcHoloVisibility(); 
-  });
-  state.room.on(RoomEvent.ParticipantDisconnected, (p) => { 
-    showToast(`${p.identity} left`);    
-    recalcHoloVisibility(); 
-  });
+    state.room.on(RoomEvent.ParticipantConnected, (p) => { 
+      showToast(`${p.identity} joined`);  
+      recalcHoloVisibility(); 
+    });
+    state.room.on(RoomEvent.ParticipantDisconnected, (p) => { 
+      showToast(`${p.identity} left`);    
+      recalcHoloVisibility(); 
+    });
 
-  state.room.on(RoomEvent.TrackSubscribed, (track, pub, p) => attachRemoteTrack(track, pub, p));
-  state.room.on(RoomEvent.TrackUnsubscribed, () => { 
-    const rv = $('remoteVideo'); 
-    if (rv) rv.srcObject = null; 
-    recalcHoloVisibility(); 
-  });
+    state.room.on(RoomEvent.TrackSubscribed, (track, pub, p) => attachRemoteTrack(track, pub, p));
+    state.room.on(RoomEvent.TrackUnsubscribed, () => { 
+      const rv = $('remoteVideo'); 
+      if (rv) rv.srcObject = null; 
+      recalcHoloVisibility(); 
+    });
 
-  const local = await createLocalTracks({ 
-    audio: true, 
-    video: { facingMode: 'user', width: 960, frameRate: 24 } 
-  });
-  state.localTracks = local; 
-  previewLocal(local);
+    // Request media permissions with error handling
+    let local;
+    try {
+      local = await createLocalTracks({ 
+        audio: true, 
+        video: { facingMode: 'user', width: 960, frameRate: 24 } 
+      });
+    } catch (err) {
+      // Try audio-only fallback if camera fails
+      if (err.name === 'NotAllowedError') {
+        showToast('Camera/mic permission denied - trying audio only');
+        try {
+          local = await createLocalTracks({ audio: true });
+        } catch (audioErr) {
+          throw new Error('Microphone permission denied. Please allow access in your browser settings.');
+        }
+      } else if (err.name === 'NotFoundError') {
+        throw new Error('No camera or microphone found. Please connect a device and try again.');
+      } else if (err.name === 'NotReadableError') {
+        throw new Error('Camera/microphone is already in use by another app');
+      } else {
+        throw new Error(`Media error: ${err.message || 'Could not access camera/microphone'}`);
+      }
+    }
+    
+    state.localTracks = local; 
+    previewLocal(local);
 
-  await state.room.connect(state.livekitUrl, await token);
-  for (const t of local) await state.room.localParticipant.publishTrack(t);
+    // Connect to room
+    try {
+      await state.room.connect(state.livekitUrl, token);
+    } catch (err) {
+      // Clean up tracks on connection failure
+      for (const t of local) {
+        try { t.stop(); } catch {}
+      }
+      
+      if (err.message?.includes('token')) {
+        throw new Error('Invalid room token - please try again');
+      } else if (err.message?.includes('timeout')) {
+        throw new Error('Connection timeout - check your internet');
+      } else {
+        throw new Error(`Connection failed: ${err.message || 'Unknown error'}`);
+      }
+    }
 
-  setUIState({ joined: true }); 
-  showToast(`joined: ${room}`); 
+    // Publish tracks
+    try {
+      for (const t of local) {
+        await state.room.localParticipant.publishTrack(t);
+      }
+    } catch (err) {
+      console.error('Failed to publish tracks:', err);
+      // Continue anyway - connection is established
+    }
+
+    setUIState({ joined: true }); 
+    showToast(`joined: ${room}`); 
+    recalcHoloVisibility();
+    
+  } catch (err) {
+    console.error('Join failed:', err);
+    showToast(err.message || 'Failed to join room');
+    
+    // Cleanup on error
+    cleanup();
+  }
+}
+
+function cleanup() {
+  if (state.room) {
+    try { state.room.disconnect(); } catch {}
+    state.room = null;
+  }
+  
+  for (const t of state.localTracks) {
+    try { t.stop(); } catch {}
+  }
+  state.localTracks = [];
+  
+  const lv = $('localVideo');
+  if (lv) lv.srcObject = null;
+  
+  setUIState({ joined: false, micOn: true, camOn: true });
   recalcHoloVisibility();
 }
 

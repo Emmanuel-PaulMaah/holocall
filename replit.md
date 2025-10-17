@@ -136,6 +136,14 @@ The app is configured for Replit Autoscale deployment:
 - All modules use ES6 imports/exports
 - No functionality changes - pure refactoring
 
+### Error Handling Improvements (Oct 17, 2025)
+- **Join flow error handling** - Graceful handling of token errors, connection failures, and server issues
+- **Media permission errors** - Clear messages for camera/mic permission denials with actionable instructions
+- **Graceful degradation** - Falls back to audio-only mode if camera fails but microphone works
+- **Network recovery** - Shows reconnection attempts with count, displays disconnect reasons
+- **Device errors** - Detects missing devices, devices in use, and permission issues with helpful messages
+- **Automatic cleanup** - Properly cleans up resources on errors to prevent app state corruption
+
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
 - AR features require HTTPS and AR-capable devices (most modern smartphones)
