@@ -10,14 +10,16 @@ async function fetchConfig() {
   try {
     const r = await fetch('/api/config', {cache: 'no-store'}); 
     if (!r.ok) {
-      throw new Error(`Config fetch failed: ${r.status}`);
+      throw new Error('Server temporarily unavailable. Please try again.');
     }
     const j = await r.json(); 
     state.livekitUrl = j.livekitUrl; 
-    if (!state.livekitUrl) throw new Error('LIVEKIT_URL not configured'); 
+    if (!state.livekitUrl) {
+      throw new Error('Video service not configured. Please contact support.');
+    }
   } catch (err) {
     if (err.name === 'TypeError' || err.message.includes('fetch')) {
-      throw new Error('Network error - check your connection');
+      throw new Error('Cannot reach server. Check your internet connection.');
     }
     throw err;
   }
@@ -28,19 +30,22 @@ async function getToken(room) {
     const r = await fetch(`/api/token?room=${encodeURIComponent(room)}`, {cache: 'no-store', credentials: 'include'}); 
     
     if (r.status === 401) {
-      throw new Error('Session expired - please login again');
+      throw new Error('Your session expired. Please refresh the page and login again.');
     }
     if (r.status === 403) {
-      throw new Error('Access denied - check your permissions');
+      throw new Error('You don\'t have permission to join this room. Contact the room owner for access.');
+    }
+    if (r.status === 404) {
+      throw new Error('Room service unavailable. Please try again later.');
     }
     if (!r.ok) {
-      throw new Error(`Server error (${r.status})`);
+      throw new Error('Server error. Please try again in a moment.');
     }
     
     return r.text();
   } catch (err) {
     if (err.name === 'TypeError' || err.message.includes('fetch')) {
-      throw new Error('Network error - check your connection');
+      throw new Error('Cannot reach server. Check your internet connection.');
     }
     throw err;
   }
@@ -164,13 +169,16 @@ export async function join() {
     
     state.room.on(RoomEvent.Disconnected, (reason) => {
       if (state.joined) {
-        const reasonText = reason === 'server_shutdown' 
-          ? 'Server restarted' 
-          : reason === 'network_timeout'
-          ? 'Network timeout'
-          : 'Connection lost';
-        showToast(`${reasonText} - please rejoin`);
+        // Clean up first to re-enable Join button
         cleanup();
+        
+        // Then show message so button is available when user sees it
+        const reasonText = reason === 'server_shutdown' 
+          ? 'Server restarted. ' 
+          : reason === 'network_timeout'
+          ? 'Network connection lost. '
+          : 'Disconnected. ';
+        showToast(`${reasonText}Click Join to reconnect.`);
       }
     });
 
@@ -200,18 +208,21 @@ export async function join() {
     } catch (err) {
       // Try audio-only fallback if camera fails
       if (err.name === 'NotAllowedError') {
-        showToast('Camera/mic permission denied - trying audio only');
+        showToast('Camera permission denied - click the lock icon in your address bar to allow access');
         try {
           local = await createLocalTracks({ audio: true });
+          showToast('Joined in audio-only mode ✓');
         } catch (audioErr) {
-          throw new Error('Microphone permission denied. Please allow access in your browser settings.');
+          throw new Error('Microphone access also denied. Click the lock icon in your browser\'s address bar, allow microphone access, then click Join again.');
         }
       } else if (err.name === 'NotFoundError') {
         throw new Error('No camera or microphone found. Please connect a device and try again.');
       } else if (err.name === 'NotReadableError') {
-        throw new Error('Camera/microphone is already in use by another app');
+        throw new Error('Camera/microphone is already in use. Close other apps and try again.');
+      } else if (err.name === 'OverconstrainedError') {
+        throw new Error('Your camera doesn\'t support the required settings. Please try a different device.');
       } else {
-        throw new Error(`Media error: ${err.message || 'Could not access camera/microphone'}`);
+        throw new Error('Could not access your camera or microphone. Please check your device settings and try again.');
       }
     }
     
@@ -228,11 +239,13 @@ export async function join() {
       }
       
       if (err.message?.includes('token')) {
-        throw new Error('Invalid room token - please try again');
+        throw new Error('Could not join room. Please check the room name and try again.');
       } else if (err.message?.includes('timeout')) {
-        throw new Error('Connection timeout - check your internet');
+        throw new Error('Connection timed out. Check your internet and try again.');
+      } else if (err.message?.includes('websocket')) {
+        throw new Error('Cannot connect to video server. Please try again.');
       } else {
-        throw new Error(`Connection failed: ${err.message || 'Unknown error'}`);
+        throw new Error('Connection failed. Please try again in a moment.');
       }
     }
 
@@ -260,6 +273,9 @@ export async function join() {
 }
 
 function cleanup() {
+  // Immediately re-enable Join button so user can retry
+  setUIState({ joined: false, micOn: true, camOn: true });
+  
   if (state.room) {
     try { state.room.disconnect(); } catch {}
     state.room = null;
@@ -273,7 +289,6 @@ function cleanup() {
   const lv = $('localVideo');
   if (lv) lv.srcObject = null;
   
-  setUIState({ joined: false, micOn: true, camOn: true });
   recalcHoloVisibility();
 }
 
