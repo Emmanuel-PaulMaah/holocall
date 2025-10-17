@@ -146,6 +146,13 @@ The app is configured for Replit Autoscale deployment:
 - **Automatic cleanup** - Join button re-enabled before retry message appears for reliable manual retry
 - **Complete coverage** - All error scenarios handled with user-friendly, actionable messaging
 
+### Authentication Redirect Fix (Oct 17, 2025)
+- **Fixed auth check race condition** - App now properly waits for authentication before initializing
+- **Proper redirect flow** - Unauthenticated users are immediately redirected to login page
+- **Async initialization** - Added `init()` function that awaits auth check before setting up event listeners
+- **Custom domain support** - Works correctly on holocall.replit.app, holocall.vercel.app, and all Replit/Vercel domains
+- **No UI flash** - Users no longer see the Join button before being redirected
+
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
 - AR features require HTTPS and AR-capable devices (most modern smartphones)
