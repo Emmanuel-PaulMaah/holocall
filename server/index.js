@@ -210,7 +210,13 @@ app.get('/api/token', requireAuth, async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 5000;
-app.listen(port, '0.0.0.0', () => {
-  console.log(`✅ server running on http://0.0.0.0:${port}`);
-});
+// Export the app for Vercel serverless functions
+export default app;
+
+// Only start the server if not running in Vercel
+if (process.env.VERCEL !== '1') {
+  const port = process.env.PORT || 5000;
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`✅ server running on http://0.0.0.0:${port}`);
+  });
+}
