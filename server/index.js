@@ -14,16 +14,16 @@ if (!isProduction) {
   allowedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
 }
 
-const TRUSTED_REPLIT_SUFFIXES = ['.replit.dev', '.repl.co'];
+const TRUSTED_SUFFIXES = ['.replit.dev', '.repl.co', '.vercel.app'];
 
-function isValidReplitDomain(domain) {
-  return TRUSTED_REPLIT_SUFFIXES.some(suffix => domain.endsWith(suffix));
+function isValidDomain(domain) {
+  return TRUSTED_SUFFIXES.some(suffix => domain.endsWith(suffix));
 }
 
 if (process.env.REPLIT_DOMAINS) {
   process.env.REPLIT_DOMAINS.split(',').forEach(domain => {
     const trimmed = domain.trim();
-    if (isValidReplitDomain(trimmed)) {
+    if (isValidDomain(trimmed)) {
       allowedOrigins.push(`https://${trimmed}`);
     } else {
       console.warn(`Rejected untrusted domain: ${trimmed}`);
@@ -31,8 +31,13 @@ if (process.env.REPLIT_DOMAINS) {
   });
 }
 
-if (process.env.REPLIT_DEV_DOMAIN && isValidReplitDomain(process.env.REPLIT_DEV_DOMAIN)) {
+if (process.env.REPLIT_DEV_DOMAIN && isValidDomain(process.env.REPLIT_DEV_DOMAIN)) {
   allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+}
+
+// Add Vercel domain if present
+if (process.env.VERCEL_URL) {
+  allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
 }
 
 app.use(cors({ 
@@ -132,7 +137,13 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// In Vercel, serve from /var/task/public, otherwise from ../public
+const publicPath = process.env.VERCEL 
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, '..', 'public');
+
+app.use(express.static(publicPath));
 
 // auth session endpoint
 app.post('/api/auth/session', async (req, res) => {
