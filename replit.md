@@ -18,11 +18,14 @@ HoloCall is a web-based international video calling app built on LiveKit with We
 /server          - Express server with API endpoints
   /index.js      - Main server file with auth middleware
   /package.json  - Server dependencies
-/public          - Static frontend files
+/public          - Static frontend files (ES modules)
   /index.html    - Main video call UI
   /login.html    - Login page
   /signup.html   - Signup page
-  /app.js        - Client-side video call logic
+  /app.js        - Main orchestrator (coordinates modules)
+  /ui-controller.js      - UI state management and DOM updates
+  /connection-manager.js - LiveKit connection logic
+  /ar-controller.js      - WebXR/AR functionality
   /auth.js       - Client-side authentication logic
   /styles.css    - Styling for all pages
 /api             - Legacy Vercel serverless functions (not used in Replit)
@@ -122,6 +125,16 @@ The app is configured for Replit Autoscale deployment:
 - Untrusted domains are logged and rejected
 - Added JWT_SECRET enforcement at startup to prevent token forgery
 - Implemented automatic token refresh for 7-day session persistence
+
+### Code Refactoring (Oct 17, 2025)
+- Modularized app.js (344 lines) into three focused modules:
+  - **ui-controller.js** - UI state management, DOM updates, toast notifications, auth checks
+  - **connection-manager.js** - LiveKit room connection, track management, media helpers
+  - **ar-controller.js** - WebXR/AR session management, Three.js scene, hit-test logic
+  - **app.js** - Slim orchestrator that coordinates all modules
+- Improved maintainability and separation of concerns
+- All modules use ES6 imports/exports
+- No functionality changes - pure refactoring
 
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
