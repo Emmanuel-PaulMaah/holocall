@@ -1,13 +1,23 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const supabaseUrl = window.SUPABASE_URL || '';
-const supabaseKey = window.SUPABASE_ANON_KEY || '';
+let supabase;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase credentials not found');
+async function initSupabase() {
+  try {
+    const r = await fetch('/api/config', { cache: 'no-store' });
+    const config = await r.json();
+    
+    if (!config.supabaseUrl || !config.supabaseKey) {
+      throw new Error('Supabase credentials not configured');
+    }
+    
+    supabase = createClient(config.supabaseUrl, config.supabaseKey);
+    return supabase;
+  } catch (err) {
+    console.error('Failed to initialize Supabase:', err);
+    throw err;
+  }
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const $ = (id) => document.getElementById(id);
 const showError = (msg) => {
@@ -45,6 +55,7 @@ if (loginForm) {
     btn.textContent = 'Logging in...';
     
     try {
+      await initSupabase();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -53,14 +64,20 @@ if (loginForm) {
       if (error) throw error;
       
       if (data.session) {
-        await fetch('/api/auth/session', {
+        const sessionRes = await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
             user: data.user 
           }),
         });
+        
+        if (!sessionRes.ok) {
+          const errData = await sessionRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to create session');
+        }
         
         showToast('Login successful!');
         setTimeout(() => window.location.href = '/', 500);
@@ -93,6 +110,7 @@ if (signupForm) {
     btn.textContent = 'Creating account...';
     
     try {
+      await initSupabase();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -106,14 +124,20 @@ if (signupForm) {
       if (error) throw error;
       
       if (data.session) {
-        await fetch('/api/auth/session', {
+        const sessionRes = await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
             user: data.user 
           }),
         });
+        
+        if (!sessionRes.ok) {
+          const errData = await sessionRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to create session');
+        }
         
         showToast('Account created!');
         setTimeout(() => window.location.href = '/', 500);

@@ -17,7 +17,16 @@ body{
 }
 
 /* header */
-h1{font-size:16px;font-weight:600;margin:8px 0;color:var(--sub)}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+h1{font-size:16px;font-weight:600;margin:0;color:var(--sub)}
+.user-controls{display:flex;align-items:center;gap:12px}
+.user-name{color:var(--text);font-size:14px;font-weight:500}
+.logout-btn{
+  padding:6px 12px;background:rgba(255,77,79,.1);color:var(--danger);
+  border:1px solid rgba(255,77,79,.2);border-radius:8px;cursor:pointer;
+  font-size:13px;transition:background .15s,border-color .15s;
+}
+.logout-btn:hover{background:rgba(255,77,79,.15);border-color:rgba(255,77,79,.3)}
 
 /* a11y utility */
 .visually-hidden{
@@ -192,3 +201,49 @@ body.ar-active .ar-close{ display:block !important; }
   #videos{height:calc(100svh - 128px)}
   #localVideo{width:220px;height:220px}
 }
+
+/* ===== Auth Pages ===== */
+.auth-page{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;
+}
+.auth-container{
+  width:100%;max-width:400px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:16px;padding:32px;
+}
+.auth-container h1{
+  font-size:28px;font-weight:700;color:var(--text);
+  text-align:center;margin:0 0 8px 0;
+}
+.auth-subtitle{
+  text-align:center;color:var(--sub);font-size:14px;margin:0 0 24px 0;
+}
+.auth-form{display:flex;flex-direction:column;gap:16px}
+.form-group{display:flex;flex-direction:column}
+.auth-form input{
+  width:100%;padding:12px 14px;
+  background:var(--bg);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;font-size:15px;
+  outline:none;transition:border-color .15s;
+}
+.auth-form input:focus{border-color:var(--focus)}
+.auth-form input::placeholder{color:#6d7480}
+.error-message{
+  color:var(--danger);font-size:13px;
+  background:rgba(255,77,79,.1);border:1px solid rgba(255,77,79,.2);
+  padding:10px 12px;border-radius:8px;display:none;
+}
+.auth-form button[type="submit"]{
+  width:100%;padding:12px;margin-top:8px;
+  background:var(--accent);color:#101214;border:none;
+  border-radius:10px;font-size:15px;font-weight:700;
+  cursor:pointer;transition:transform .06s,opacity .15s;
+}
+.auth-form button[type="submit"]:hover:not(:disabled){transform:translateY(-1px)}
+.auth-form button[type="submit"]:disabled{opacity:.6;cursor:not-allowed}
+.auth-switch{
+  text-align:center;color:var(--sub);font-size:14px;margin:8px 0 0 0;
+}
+.auth-switch a{color:var(--accent);text-decoration:none;font-weight:500}
+.auth-switch a:hover{text-decoration:underline}

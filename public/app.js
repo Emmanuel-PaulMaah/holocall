@@ -5,10 +5,47 @@ const $ = (id) => document.getElementById(id);
 const setDisabled = (id, val) => { const el = $(id); if (el) el.disabled = val; };
 const log = (m) => { console.log(m); const L=$('log'); if(L){ L.textContent += m + '\n'; L.scrollTop=L.scrollHeight; } };
 
-const state = { room:null, localTracks:[], micOn:true, camOn:true, livekitUrl:null, remoteAudioEl:null, joined:false };
+const state = { room:null, localTracks:[], micOn:true, camOn:true, livekitUrl:null, remoteAudioEl:null, joined:false, user:null };
 
 const icon = { mute:$('muteIconBtn'), cam:$('cameraIconBtn'), leave:$('leaveIconBtn') };
 const holoBtn = $('holoBtn'), arClose = $('arClose');
+
+/* ---------------- auth check ---------------- */
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth/user', { credentials: 'include' });
+    if (!r.ok) {
+      window.location.href = '/login.html';
+      return false;
+    }
+    const data = await r.json();
+    state.user = data.user;
+    updateUserUI();
+    return true;
+  } catch (err) {
+    window.location.href = '/login.html';
+    return false;
+  }
+}
+
+function updateUserUI() {
+  const userInfo = $('userInfo');
+  const logoutBtn = $('logoutBtn');
+  
+  if (state.user && userInfo) {
+    const name = state.user.user_metadata?.full_name || state.user.email?.split('@')[0] || 'User';
+    userInfo.textContent = name;
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      window.location.href = '/login.html';
+    });
+  }
+}
+
+checkAuth();
 
 /* ---------------- UI helpers ---------------- */
 function showToast(msg){ const t=$('toast'); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(()=>t.classList.remove('show'), 2200); }
@@ -22,7 +59,7 @@ function recalcHoloVisibility(){ const hasRemote = !!state.room && (state.room.r
 
 /* ---------------- server helpers ---------------- */
 async function fetchConfig(){ const r=await fetch('/api/config',{cache:'no-store'}); const j=await r.json(); state.livekitUrl=j.livekitUrl; if(!state.livekitUrl) throw new Error('LIVEKIT_URL missing'); }
-async function getToken(room,user){ const r=await fetch(`/api/token?room=${encodeURIComponent(room)}&user=${encodeURIComponent(user)}`,{cache:'no-store'}); if(!r.ok) throw new Error('token fetch failed'); return r.text(); }
+async function getToken(room){ const r=await fetch(`/api/token?room=${encodeURIComponent(room)}`,{cache:'no-store', credentials: 'include'}); if(!r.ok) throw new Error('token fetch failed'); return r.text(); }
 
 /* ---------------- media helpers ---------------- */
 function ensureAttrs(v){ v.muted = true; v.autoplay = true; v.playsInline = true;
@@ -102,11 +139,10 @@ function attachRemoteTrack(track,pub){
 
 /* ---------------- join / leave ---------------- */
 async function join(){
-  const room=$('room').value.trim(), name=$('name').value.trim();
+  const room=$('room').value.trim();
   if(!room){ showToast('enter a room name'); $('room')?.focus(); return; }
-  if(!name){ showToast('enter your name');  $('name')?.focus(); return; }
 
-  await fetchConfig(); const token=await getToken(room,name);
+  await fetchConfig(); const token=await getToken(room);
   setLogLevel('warn'); state.room=new Room({ adaptiveStream:true, dynacast:true });
 
   state.room.on(RoomEvent.Reconnecting, ()=> showToast('reconnecting…'));
