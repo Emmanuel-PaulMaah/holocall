@@ -1,7 +1,7 @@
 // Connection Manager - LiveKit connection logic
 
 import { Room, RoomEvent, createLocalTracks, setLogLevel } from 'https://cdn.jsdelivr.net/npm/livekit-client/+esm';
-import { state, showToast, setUIState, recalcHoloVisibility } from './ui-controller.js';
+import { state, showToast, setUIState, recalcHoloVisibility, getVideoConstraints } from './ui-controller.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -203,7 +203,7 @@ export async function join() {
     try {
       local = await createLocalTracks({ 
         audio: true, 
-        video: { facingMode: 'user', width: 960, frameRate: 24 } 
+        video: getVideoConstraints()
       });
     } catch (err) {
       // Try audio-only fallback if camera fails

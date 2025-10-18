@@ -12,7 +12,8 @@ export const state = {
   livekitUrl: null, 
   remoteAudioEl: null, 
   joined: false, 
-  user: null 
+  user: null,
+  videoQuality: 720
 };
 
 export const icon = { 
@@ -45,6 +46,7 @@ export async function checkAuth() {
 function updateUserUI() {
   const userInfo = $('userInfo');
   const logoutBtn = $('logoutBtn');
+  const qualitySelector = $('qualitySelector');
   
   if (state.user && userInfo) {
     const name = state.user.user_metadata?.full_name || state.user.email?.split('@')[0] || 'User';
@@ -56,6 +58,27 @@ function updateUserUI() {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       window.location.href = '/login.html';
     });
+  }
+  
+  if (qualitySelector) {
+    qualitySelector.addEventListener('change', (e) => {
+      state.videoQuality = parseInt(e.target.value, 10);
+      showToast(`Video quality: ${e.target.options[e.target.selectedIndex].text}`);
+    });
+  }
+}
+
+/* ---------------- video quality ---------------- */
+export function getVideoConstraints() {
+  const quality = state.videoQuality;
+  
+  if (quality === 360) {
+    return { facingMode: 'user', width: 640, height: 360, frameRate: 24 };
+  } else if (quality === 1080) {
+    return { facingMode: 'user', width: 1920, height: 1080, frameRate: 30 };
+  } else {
+    // 720p default
+    return { facingMode: 'user', width: 1280, height: 720, frameRate: 30 };
   }
 }
 

@@ -20,6 +20,13 @@ body{
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 h1{font-size:16px;font-weight:600;margin:0;color:var(--sub)}
 .user-controls{display:flex;align-items:center;gap:12px}
+.quality-selector{
+  padding:6px 10px;background:var(--panel);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;cursor:pointer;
+  font-size:13px;transition:border-color .15s;
+}
+.quality-selector:hover{border-color:#2a2a2a}
+.quality-selector:focus{outline:none;border-color:var(--focus)}
 .user-name{color:var(--text);font-size:14px;font-weight:500}
 .logout-btn{
   padding:6px 12px;background:rgba(255,77,79,.1);color:var(--danger);
