@@ -6,9 +6,19 @@ import { makeVideoTinyVisible } from './connection-manager.js';
 
 const $ = (id) => document.getElementById(id);
 
-let renderer, scene, camera, reticle, videoPlane;
+let renderer, scene, camera, reticle, videoPlane, videoOutline;
 let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
 let onSelectRef = null;
+
+// Touch gesture state
+let touchState = {
+  active: false,
+  touches: [],
+  initialScale: 1,
+  initialDistance: 0,
+  dragStart: null,
+  planeStartPos: null
+};
 
 async function isARSupported() {
   if (!('xr' in navigator)) return { ok: false, why: 'WebXR not available in this browser' };
@@ -210,6 +220,19 @@ function tryPlaceVideoPlane() {
     const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     videoPlane = new THREE.Mesh(geom, mat);
 
+    // Create orange outline for visual feedback (initially hidden)
+    const outlineGeom = new THREE.PlaneGeometry(1.5, 1.0);
+    const outlineMat = new THREE.MeshBasicMaterial({ 
+      color: 0xff8c00, 
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+      depthTest: false
+    });
+    videoOutline = new THREE.Mesh(outlineGeom, outlineMat);
+    videoOutline.visible = false;
+    videoOutline.renderOrder = 999;
+
     if (hitTestSource && reticle?.visible) {
       const m = new THREE.Matrix4(); 
       m.copy(reticle.matrix);
@@ -226,7 +249,163 @@ function tryPlaceVideoPlane() {
     }
 
     scene.add(videoPlane);
+    scene.add(videoOutline);
+    
+    // Attach touch gesture handlers
+    attachTouchHandlers();
+    
+    // Store initial scale for pinch gestures
+    touchState.initialScale = videoPlane.scale.x;
   });
+}
+
+/* ---------------- Touch Gesture Handlers ---------------- */
+
+function getTouchDistance(t1, t2) {
+  const dx = t2.clientX - t1.clientX;
+  const dy = t2.clientY - t1.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function updateOutline() {
+  if (!videoPlane || !videoOutline) return;
+  
+  // Match video plane position and rotation
+  videoOutline.position.copy(videoPlane.position);
+  videoOutline.quaternion.copy(videoPlane.quaternion);
+  
+  // Make outline slightly larger for border effect
+  const borderOffset = 1.05;
+  videoOutline.scale.set(
+    videoPlane.scale.x * borderOffset,
+    videoPlane.scale.y * borderOffset,
+    videoPlane.scale.z
+  );
+}
+
+function handleTouchStart(e) {
+  if (!videoPlane) return;
+  
+  e.preventDefault();
+  touchState.touches = Array.from(e.touches);
+  touchState.active = true;
+  
+  if (touchState.touches.length === 1) {
+    // Single finger drag setup
+    const touch = touchState.touches[0];
+    touchState.dragStart = { x: touch.clientX, y: touch.clientY };
+    touchState.planeStartPos = videoPlane.position.clone();
+  } else if (touchState.touches.length === 2) {
+    // Two finger pinch setup
+    const t1 = touchState.touches[0];
+    const t2 = touchState.touches[1];
+    touchState.initialDistance = getTouchDistance(t1, t2);
+    touchState.initialScale = videoPlane.scale.x;
+  }
+  
+  // Show orange outline
+  if (videoOutline) {
+    videoOutline.visible = true;
+    updateOutline();
+  }
+}
+
+function handleTouchMove(e) {
+  if (!touchState.active || !videoPlane) return;
+  
+  e.preventDefault();
+  touchState.touches = Array.from(e.touches);
+  
+  if (touchState.touches.length === 1 && touchState.dragStart) {
+    // Single finger drag - move video plane parallel to camera
+    const touch = touchState.touches[0];
+    const deltaX = touch.clientX - touchState.dragStart.x;
+    const deltaY = touch.clientY - touchState.dragStart.y;
+    
+    // Convert screen delta to world-space movement (camera-relative)
+    const xrCam = renderer.xr.getCamera(camera);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(xrCam.quaternion);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(xrCam.quaternion);
+    
+    // Scale factor based on distance from camera (farther = larger movements)
+    const distanceFromCam = videoPlane.position.distanceTo(xrCam.position);
+    const movementScale = distanceFromCam * 0.001;
+    
+    const newPos = touchState.planeStartPos.clone();
+    newPos.add(right.multiplyScalar(deltaX * movementScale));
+    newPos.add(up.multiplyScalar(-deltaY * movementScale));
+    
+    videoPlane.position.copy(newPos);
+    
+  } else if (touchState.touches.length === 2 && touchState.initialDistance > 0) {
+    // Two finger pinch - scale video plane
+    const t1 = touchState.touches[0];
+    const t2 = touchState.touches[1];
+    const currentDistance = getTouchDistance(t1, t2);
+    const scaleChange = currentDistance / touchState.initialDistance;
+    
+    // Apply scale with min/max constraints (0.3x to 4x)
+    const newScale = Math.max(0.3, Math.min(4.0, touchState.initialScale * scaleChange));
+    videoPlane.scale.set(newScale, newScale, 1);
+  }
+  
+  // Update outline to match
+  updateOutline();
+}
+
+function handleTouchEnd(e) {
+  if (!touchState.active) return;
+  
+  e.preventDefault();
+  touchState.touches = Array.from(e.touches);
+  
+  if (touchState.touches.length === 0) {
+    // All fingers lifted - hide outline
+    touchState.active = false;
+    touchState.dragStart = null;
+    touchState.planeStartPos = null;
+    touchState.initialDistance = 0;
+    
+    if (videoOutline) {
+      videoOutline.visible = false;
+    }
+  } else if (touchState.touches.length === 1) {
+    // Went from two fingers to one - reset drag
+    const touch = touchState.touches[0];
+    touchState.dragStart = { x: touch.clientX, y: touch.clientY };
+    touchState.planeStartPos = videoPlane ? videoPlane.position.clone() : null;
+    touchState.initialDistance = 0;
+  }
+}
+
+function attachTouchHandlers() {
+  if (!renderer || !renderer.domElement) return;
+  
+  const canvas = renderer.domElement;
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+  canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+}
+
+function detachTouchHandlers() {
+  if (!renderer || !renderer.domElement) return;
+  
+  const canvas = renderer.domElement;
+  canvas.removeEventListener('touchstart', handleTouchStart);
+  canvas.removeEventListener('touchmove', handleTouchMove);
+  canvas.removeEventListener('touchend', handleTouchEnd);
+  canvas.removeEventListener('touchcancel', handleTouchEnd);
+  
+  // Reset touch state
+  touchState = {
+    active: false,
+    touches: [],
+    initialScale: 1,
+    initialDistance: 0,
+    dragStart: null,
+    planeStartPos: null
+  };
 }
 
 export async function endHoloMode() { 
@@ -235,6 +414,9 @@ export async function endHoloMode() {
 }
 
 function cleanupXR() {
+  // Detach touch handlers before cleanup
+  detachTouchHandlers();
+  
   document.body.classList.remove('ar-active');
   holoBtn.hidden = false; 
   arClose.hidden = true;
@@ -256,7 +438,7 @@ function cleanupXR() {
       renderer.domElement.parentNode.removeChild(renderer.domElement); 
     }
   }
-  renderer = scene = camera = reticle = videoPlane = null;
+  renderer = scene = camera = reticle = videoPlane = videoOutline = null;
   xrSession = refSpace = viewerSpace = hitTestSource = null;
 }
 

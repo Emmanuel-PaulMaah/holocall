@@ -70,6 +70,11 @@ The following secrets must be set in Replit Secrets:
 - Hit-test based placement when supported
 - Fallback to camera-relative placement
 - Works on AR-capable mobile devices
+- **Touch gesture controls**:
+  - Tap to place video in AR space
+  - Single finger drag to reposition video
+  - Two finger pinch/spread to resize (0.3x to 4x scale)
+  - Orange outline border appears during manipulation for visual feedback
 
 ## Development
 
@@ -180,6 +185,16 @@ The app is configured for Replit Autoscale deployment:
   - 1080p: 1920x1080 @ 30fps (high quality)
 - **User feedback** - Toast notifications confirm quality changes
 - **Error handling** - Graceful fallback with helpful messages if quality switch fails
+
+### AR Gesture Controls (Oct 18, 2025)
+- **Touch-based video manipulation** - Drag and resize remote video feed in AR space using natural gestures
+- **Single finger drag** - Reposition video plane anywhere in 3D space with camera-relative movement
+- **Two finger pinch/spread** - Resize video from 0.3x to 4x original size with smooth scaling
+- **Visual feedback** - Orange outline border appears during manipulation for clear interaction state
+- **Smart movement scaling** - Drag distance adapts based on video distance from camera for natural feel
+- **Seamless gesture transitions** - Smoothly switch from drag to pinch without lifting all fingers
+- **Proper cleanup** - Touch handlers automatically removed when exiting AR mode
+- **Works with hit-testing** - Gesture controls complement tap-to-place functionality
 
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
