@@ -61,6 +61,61 @@ function ensureAttrs(v) {
   v.setAttribute('playsinline', ''); 
 }
 
+/** Switch video quality during an active call */
+export async function switchVideoQuality() {
+  if (!state.room || !state.joined) {
+    return; // Not in a call
+  }
+
+  const localParticipant = state.room.localParticipant;
+  const videoPublication = Array.from(localParticipant.videoTracks.values())[0];
+  
+  if (!videoPublication) {
+    showToast('No camera track to update');
+    return;
+  }
+
+  try {
+    const oldTrack = videoPublication.videoTrack;
+    
+    // Create new video track with updated constraints
+    const newTracks = await createLocalTracks({ 
+      video: getVideoConstraints() 
+    });
+    
+    const newVideoTrack = newTracks.find(t => t.kind === 'video');
+    
+    if (!newVideoTrack) {
+      throw new Error('Failed to create new video track');
+    }
+
+    // Replace the track
+    await oldTrack.replaceTrack(newVideoTrack.mediaStreamTrack);
+    
+    // Preserve camera mute state to prevent privacy issue
+    if (oldTrack.mediaStreamTrack) {
+      oldTrack.mediaStreamTrack.enabled = state.camOn;
+    }
+    
+    // Update state
+    const oldIndex = state.localTracks.findIndex(t => t === oldTrack);
+    if (oldIndex >= 0) {
+      state.localTracks[oldIndex] = oldTrack;
+    }
+    
+    // Update local video display
+    const lv = $('localVideo');
+    if (lv && oldTrack.mediaStream) {
+      lv.srcObject = oldTrack.mediaStream;
+    }
+    
+    showToast('Video quality updated successfully');
+  } catch (err) {
+    console.error('Failed to switch video quality:', err);
+    showToast('Failed to update video quality. Try rejoining the room.');
+  }
+}
+
 /** On some Android builds, fully hidden videos won't decode. Make it tiny-but-visible. */
 export function makeVideoTinyVisible(v) {
   if (!v) return;

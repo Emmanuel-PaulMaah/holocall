@@ -61,9 +61,26 @@ function updateUserUI() {
   }
   
   if (qualitySelector) {
-    qualitySelector.addEventListener('change', (e) => {
-      state.videoQuality = parseInt(e.target.value, 10);
-      showToast(`Video quality: ${e.target.options[e.target.selectedIndex].text}`);
+    qualitySelector.addEventListener('change', async (e) => {
+      const newQuality = parseInt(e.target.value, 10);
+      const qualityText = e.target.options[e.target.selectedIndex].text;
+      state.videoQuality = newQuality;
+      
+      // If already in a call, switch quality live
+      if (state.joined) {
+        try {
+          qualitySelector.disabled = true;
+          showToast(`Switching to ${qualityText}...`);
+          
+          // Dynamic import to avoid circular dependency
+          const { switchVideoQuality } = await import('./connection-manager.js');
+          await switchVideoQuality();
+        } finally {
+          qualitySelector.disabled = false;
+        }
+      } else {
+        showToast(`Video quality: ${qualityText}`);
+      }
     });
   }
 }
