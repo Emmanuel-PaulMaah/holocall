@@ -320,33 +320,16 @@ export async function join() {
         
         // Add high-quality encoding for video tracks
         if (t.kind === 'video') {
-          publishOptions.videoEncoding = getVideoEncodingOptions();
+          const encodingOptions = getVideoEncodingOptions();
           
-          // Enable simulcast for adaptive quality (3 layers)
+          // Set video encoding for quality
+          publishOptions.videoEncoding = {
+            maxBitrate: encodingOptions.maxBitrate,
+            maxFramerate: encodingOptions.maxFramerate
+          };
+          
+          // Enable simulcast for adaptive quality (LiveKit auto-generates 3 layers)
           publishOptions.simulcast = true;
-          publishOptions.videoSimulcastLayers = [
-            { 
-              quality: 'low',
-              width: 320,
-              height: 180,
-              maxBitrate: 150_000,
-              maxFramerate: 15
-            },
-            { 
-              quality: 'medium',
-              width: 640,
-              height: 360,
-              maxBitrate: 500_000,
-              maxFramerate: 24
-            },
-            { 
-              quality: 'high',
-              width: state.videoQuality === 1080 ? 1920 : 1280,
-              height: state.videoQuality === 1080 ? 1080 : 720,
-              maxBitrate: getVideoEncodingOptions().maxBitrate,
-              maxFramerate: getVideoEncodingOptions().maxFramerate
-            }
-          ];
         }
         
         await state.room.localParticipant.publishTrack(t, publishOptions);
