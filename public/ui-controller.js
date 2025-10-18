@@ -90,12 +90,49 @@ export function getVideoConstraints() {
   const quality = state.videoQuality;
   
   if (quality === 360) {
-    return { facingMode: 'user', width: 640, height: 360, frameRate: 24 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 640, min: 480 },
+      height: { ideal: 360, min: 270 },
+      frameRate: { ideal: 24, min: 15 }
+    };
   } else if (quality === 1080) {
-    return { facingMode: 'user', width: 1920, height: 1080, frameRate: 30 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 1920, min: 1280 },
+      height: { ideal: 1080, min: 720 },
+      frameRate: { ideal: 30, min: 24 }
+    };
   } else {
     // 720p default
-    return { facingMode: 'user', width: 1280, height: 720, frameRate: 30 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 1280, min: 640 },
+      height: { ideal: 720, min: 480 },
+      frameRate: { ideal: 30, min: 20 }
+    };
+  }
+}
+
+export function getVideoEncodingOptions() {
+  const quality = state.videoQuality;
+  
+  if (quality === 360) {
+    return {
+      maxBitrate: 800_000,      // 800 kbps for 360p
+      maxFramerate: 24
+    };
+  } else if (quality === 1080) {
+    return {
+      maxBitrate: 5_000_000,    // 5 Mbps for 1080p
+      maxFramerate: 30
+    };
+  } else {
+    // 720p default
+    return {
+      maxBitrate: 3_000_000,    // 3 Mbps for 720p
+      maxFramerate: 30
+    };
   }
 }
 

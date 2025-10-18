@@ -1,7 +1,7 @@
 // Connection Manager - LiveKit connection logic
 
 import { Room, RoomEvent, createLocalTracks, setLogLevel } from 'https://cdn.jsdelivr.net/npm/livekit-client/+esm';
-import { state, showToast, setUIState, recalcHoloVisibility, getVideoConstraints } from './ui-controller.js';
+import { state, showToast, setUIState, recalcHoloVisibility, getVideoConstraints, getVideoEncodingOptions } from './ui-controller.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -91,6 +91,15 @@ export async function switchVideoQuality() {
 
     // Replace the track
     await oldTrack.replaceTrack(newVideoTrack.mediaStreamTrack);
+    
+    // Update encoding settings for the new quality
+    const encodingOptions = getVideoEncodingOptions();
+    try {
+      await videoPublication.setVideoEncoding(encodingOptions);
+    } catch (encErr) {
+      console.warn('Could not update encoding settings:', encErr);
+      // Continue anyway - track is replaced
+    }
     
     // Preserve camera mute state to prevent privacy issue
     if (oldTrack.mediaStreamTrack) {
@@ -304,10 +313,43 @@ export async function join() {
       }
     }
 
-    // Publish tracks
+    // Publish tracks with quality settings
     try {
       for (const t of local) {
-        await state.room.localParticipant.publishTrack(t);
+        const publishOptions = {};
+        
+        // Add high-quality encoding for video tracks
+        if (t.kind === 'video') {
+          publishOptions.videoEncoding = getVideoEncodingOptions();
+          
+          // Enable simulcast for adaptive quality (3 layers)
+          publishOptions.simulcast = true;
+          publishOptions.videoSimulcastLayers = [
+            { 
+              quality: 'low',
+              width: 320,
+              height: 180,
+              maxBitrate: 150_000,
+              maxFramerate: 15
+            },
+            { 
+              quality: 'medium',
+              width: 640,
+              height: 360,
+              maxBitrate: 500_000,
+              maxFramerate: 24
+            },
+            { 
+              quality: 'high',
+              width: state.videoQuality === 1080 ? 1920 : 1280,
+              height: state.videoQuality === 1080 ? 1080 : 720,
+              maxBitrate: getVideoEncodingOptions().maxBitrate,
+              maxFramerate: getVideoEncodingOptions().maxFramerate
+            }
+          ];
+        }
+        
+        await state.room.localParticipant.publishTrack(t, publishOptions);
       }
     } catch (err) {
       console.error('Failed to publish tracks:', err);
