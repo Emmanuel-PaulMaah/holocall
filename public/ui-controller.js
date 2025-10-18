@@ -119,18 +119,18 @@ export function getVideoEncodingOptions() {
   
   if (quality === 360) {
     return {
-      maxBitrate: 800_000,      // 800 kbps for 360p
+      maxBitrate: 600_000,      // 600 kbps for 360p (LiveKit recommended)
       maxFramerate: 24
     };
   } else if (quality === 1080) {
     return {
-      maxBitrate: 5_000_000,    // 5 Mbps for 1080p
+      maxBitrate: 2_000_000,    // 2 Mbps for 1080p (LiveKit recommended)
       maxFramerate: 30
     };
   } else {
     // 720p default
     return {
-      maxBitrate: 3_000_000,    // 3 Mbps for 720p
+      maxBitrate: 1_000_000,    // 1 Mbps for 720p (LiveKit recommended)
       maxFramerate: 30
     };
   }
