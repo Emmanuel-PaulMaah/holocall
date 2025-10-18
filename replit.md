@@ -63,6 +63,7 @@ The following secrets must be set in Replit Secrets:
 - 👤 **User sessions** - HTTP-only cookie-based sessions with 7-day expiry
 - 👓 **WebXR AR mode** - "Holo Mode" for supported devices
 - 🎛️ **In-call controls** - Mute, camera toggle, leave with confirmation
+- 🎬 **Video quality selector** - Choose 360p, 720p (HD), or 1080p (Full HD) with live switching during calls
 
 ### WebXR AR Mode
 - Places remote video feed as 3D plane in AR space
@@ -168,7 +169,20 @@ The app is configured for Replit Autoscale deployment:
 - **Account recovery** - Users can regain access to locked or unconfirmed accounts
 - **Success feedback** - Clear visual confirmation when reset email is sent and password is updated
 
+### Video Quality Selector (Oct 18, 2025)
+- **Quality dropdown in header** - Select between 360p, 720p (HD default), and 1080p (Full HD)
+- **Live quality switching** - Change video quality during active calls without disconnecting
+- **Privacy-first design** - Camera mute state is preserved when switching quality
+- **Smooth transitions** - Quality selector is disabled during track replacement to prevent race conditions
+- **Smart constraints** - Each quality level has optimized resolution and frame rate:
+  - 360p: 640x360 @ 24fps (low bandwidth)
+  - 720p: 1280x720 @ 30fps (balanced default)
+  - 1080p: 1920x1080 @ 30fps (high quality)
+- **User feedback** - Toast notifications confirm quality changes
+- **Error handling** - Graceful fallback with helpful messages if quality switch fails
+
 ## Notes
 - The `/api` folder contains legacy Vercel serverless functions - the Express server handles these endpoints instead
 - AR features require HTTPS and AR-capable devices (most modern smartphones)
 - LiveKit credentials must be configured before the app can facilitate calls
+- Video quality can be changed before or during calls - the new setting applies to your outgoing video stream
