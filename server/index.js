@@ -7,49 +7,97 @@ import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 
-const allowedOrigins = [];
+const allowedOrigins = new Set();
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Helper to safely add origin to allowlist
+function addOrigin(hostname) {
+  if (!hostname) return;
+  
+  try {
+    // Parse and normalize the hostname
+    const normalized = hostname.trim().toLowerCase();
+    
+    // Validate it's a valid hostname (no protocols, paths, etc.)
+    if (normalized.includes('://') || normalized.includes('/') || normalized.includes('@')) {
+      console.warn(`Rejected invalid hostname format: ${hostname}`);
+      return;
+    }
+    
+    // Add with https protocol
+    allowedOrigins.add(`https://${normalized}`);
+  } catch (e) {
+    console.warn(`Failed to add origin ${hostname}:`, e.message);
+  }
+}
+
+// Development localhost origins
 if (!isProduction) {
-  allowedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
+  allowedOrigins.add('http://localhost:5000');
+  allowedOrigins.add('http://127.0.0.1:5000');
 }
 
-const TRUSTED_SUFFIXES = ['.replit.dev', '.repl.co', '.vercel.app'];
-
-function isValidDomain(domain) {
-  return TRUSTED_SUFFIXES.some(suffix => domain.endsWith(suffix));
-}
-
+// Replit domains (explicitly configured only)
 if (process.env.REPLIT_DOMAINS) {
   process.env.REPLIT_DOMAINS.split(',').forEach(domain => {
     const trimmed = domain.trim();
-    if (isValidDomain(trimmed)) {
-      allowedOrigins.push(`https://${trimmed}`);
+    if (trimmed.endsWith('.replit.dev') || trimmed.endsWith('.repl.co')) {
+      addOrigin(trimmed);
     } else {
-      console.warn(`Rejected untrusted domain: ${trimmed}`);
+      console.warn(`Rejected non-Replit domain: ${trimmed}`);
     }
   });
 }
 
-if (process.env.REPLIT_DEV_DOMAIN && isValidDomain(process.env.REPLIT_DEV_DOMAIN)) {
-  allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+if (process.env.REPLIT_DEV_DOMAIN) {
+  const domain = process.env.REPLIT_DEV_DOMAIN.trim();
+  if (domain.endsWith('.replit.dev') || domain.endsWith('.repl.co')) {
+    addOrigin(domain);
+  }
 }
 
-// Add Vercel domain if present
+// Vercel auto-generated URL
 if (process.env.VERCEL_URL) {
-  allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+  addOrigin(process.env.VERCEL_URL);
 }
+
+// Vercel custom domain (e.g., holocall.vercel.app)
+if (process.env.VERCEL_CUSTOM_DOMAIN) {
+  const domain = process.env.VERCEL_CUSTOM_DOMAIN.trim();
+  if (domain.endsWith('.vercel.app') && !domain.includes(' ')) {
+    addOrigin(domain);
+  } else {
+    console.warn(`Rejected invalid Vercel custom domain: ${domain}`);
+  }
+}
+
+console.log('Allowed CORS origins:', Array.from(allowedOrigins));
 
 app.use(cors({ 
   credentials: true, 
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (e.g., mobile apps, curl)
+    if (!origin) {
       callback(null, true);
-    } else {
-      console.error(`CORS blocked origin: ${origin}`);
-      console.error(`Allowed origins:`, allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+    
+    // Check if origin is in allowlist
+    if (allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    
+    // Try normalized comparison (lowercase)
+    const normalizedOrigin = origin.toLowerCase();
+    if (allowedOrigins.has(normalizedOrigin)) {
+      callback(null, true);
+      return;
+    }
+    
+    console.error(`CORS blocked origin: ${origin}`);
+    console.error(`Allowed origins:`, Array.from(allowedOrigins));
+    callback(new Error('Not allowed by CORS'));
   }
 }));
 app.use(express.json());
