@@ -9,6 +9,7 @@ const $ = (id) => document.getElementById(id);
 let renderer, scene, camera, reticle, videoPlane, videoOutline;
 let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
 let onSelectRef = null;
+let raycaster = null, touchPointer = null;
 
 // Touch gesture state
 let touchState = {
@@ -220,16 +221,15 @@ function tryPlaceVideoPlane() {
     const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     videoPlane = new THREE.Mesh(geom, mat);
 
-    // Create orange outline for visual feedback (initially hidden)
-    const outlineGeom = new THREE.PlaneGeometry(1.5, 1.0);
-    const outlineMat = new THREE.MeshBasicMaterial({ 
-      color: 0xff8c00, 
-      side: THREE.DoubleSide,
+    // Create orange wireframe outline for visual feedback (initially hidden)
+    const outlineGeom = new THREE.EdgesGeometry(geom);
+    const outlineMat = new THREE.LineBasicMaterial({ 
+      color: 0xff8c00,
+      linewidth: 3,
       transparent: true,
-      opacity: 0.8,
-      depthTest: false
+      opacity: 1.0
     });
-    videoOutline = new THREE.Mesh(outlineGeom, outlineMat);
+    videoOutline = new THREE.LineSegments(outlineGeom, outlineMat);
     videoOutline.visible = false;
     videoOutline.renderOrder = 999;
 
@@ -251,6 +251,10 @@ function tryPlaceVideoPlane() {
     scene.add(videoPlane);
     scene.add(videoOutline);
     
+    // Initialize raycaster for touch detection
+    raycaster = new THREE.Raycaster();
+    touchPointer = new THREE.Vector2();
+    
     // Attach touch gesture handlers
     attachTouchHandlers();
     
@@ -270,30 +274,50 @@ function getTouchDistance(t1, t2) {
 function updateOutline() {
   if (!videoPlane || !videoOutline) return;
   
-  // Match video plane position and rotation
+  // Match video plane position, rotation, and scale exactly
   videoOutline.position.copy(videoPlane.position);
   videoOutline.quaternion.copy(videoPlane.quaternion);
+  videoOutline.scale.copy(videoPlane.scale);
+}
+
+function isTouchOnVideoPlane(clientX, clientY) {
+  if (!videoPlane || !raycaster || !renderer || !camera) return false;
   
-  // Make outline slightly larger for border effect
-  const borderOffset = 1.05;
-  videoOutline.scale.set(
-    videoPlane.scale.x * borderOffset,
-    videoPlane.scale.y * borderOffset,
-    videoPlane.scale.z
-  );
+  // Convert touch coordinates to normalized device coordinates (-1 to +1)
+  const rect = renderer.domElement.getBoundingClientRect();
+  touchPointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  touchPointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  
+  // Get XR camera
+  const xrCam = renderer.xr.getCamera(camera);
+  
+  // Update raycaster with camera and pointer position
+  raycaster.setFromCamera(touchPointer, xrCam);
+  
+  // Check for intersections with video plane
+  const intersects = raycaster.intersectObject(videoPlane, false);
+  return intersects.length > 0;
 }
 
 function handleTouchStart(e) {
   if (!videoPlane) return;
   
-  e.preventDefault();
   touchState.touches = Array.from(e.touches);
+  
+  // Check if first touch is on the video plane
+  const firstTouch = touchState.touches[0];
+  if (!isTouchOnVideoPlane(firstTouch.clientX, firstTouch.clientY)) {
+    // Touch is not on video plane - allow normal UI interaction
+    return;
+  }
+  
+  // Touch is on video plane - activate gesture controls
+  e.preventDefault();
   touchState.active = true;
   
   if (touchState.touches.length === 1) {
     // Single finger drag setup
-    const touch = touchState.touches[0];
-    touchState.dragStart = { x: touch.clientX, y: touch.clientY };
+    touchState.dragStart = { x: firstTouch.clientX, y: firstTouch.clientY };
     touchState.planeStartPos = videoPlane.position.clone();
   } else if (touchState.touches.length === 2) {
     // Two finger pinch setup
@@ -440,6 +464,7 @@ function cleanupXR() {
   }
   renderer = scene = camera = reticle = videoPlane = videoOutline = null;
   xrSession = refSpace = viewerSpace = hitTestSource = null;
+  raycaster = touchPointer = null;
 }
 
 // Export setup function for event listeners
