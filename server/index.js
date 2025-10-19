@@ -123,6 +123,26 @@ function getSupabaseClient() {
   return createClient(url, key);
 }
 
+// Get authenticated Supabase client for a specific user
+function getAuthenticatedSupabaseClient(accessToken) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  
+  if (!url || !key) {
+    throw new Error('Supabase credentials not configured');
+  }
+  
+  const supabase = createClient(url, key, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  });
+  
+  return supabase;
+}
+
 // auth middleware with token refresh
 const requireAuth = async (req, res, next) => {
   try {
@@ -163,6 +183,7 @@ const requireAuth = async (req, res, next) => {
         });
         
         user = refreshData.user;
+        decoded.access_token = refreshData.session.access_token;
       } catch (refreshErr) {
         return res.status(401).json({ error: 'unauthorized', message: 'Session refresh failed' });
       }
@@ -173,6 +194,7 @@ const requireAuth = async (req, res, next) => {
     }
     
     req.user = user;
+    req.accessToken = decoded.access_token;
     next();
   } catch (err) {
     console.error('Auth middleware error:', err);
@@ -266,6 +288,315 @@ app.get('/api/token', requireAuth, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'failed_to_create_token' });
+  }
+});
+
+// ============ PROFILE ENDPOINTS ============
+
+// Get current user's profile
+app.get('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+      throw error;
+    }
+    
+    res.json({ profile: data || null });
+  } catch (err) {
+    console.error('Get profile error:', err);
+    res.status(500).json({ error: 'failed_to_get_profile', message: err.message });
+  }
+});
+
+// Create or update profile
+app.post('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const { username, bio, tags, profile_picture_url } = req.body;
+    
+    if (!username || username.length < 3 || username.length > 30) {
+      return res.status(400).json({ error: 'invalid_username', message: 'Username must be 3-30 characters' });
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'invalid_username', message: 'Username can only contain letters, numbers, and underscores' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    const profileData = {
+      id: req.user.id,
+      username,
+      bio: bio || '',
+      tags: tags || [],
+      profile_picture_url: profile_picture_url || null,
+      updated_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert(profileData, { onConflict: 'id' })
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(409).json({ error: 'username_taken', message: 'Username already taken' });
+      }
+      throw error;
+    }
+    
+    res.json({ profile: data });
+  } catch (err) {
+    console.error('Save profile error:', err);
+    res.status(500).json({ error: 'failed_to_save_profile', message: err.message });
+  }
+});
+
+// Update online status
+app.post('/api/profile/status', requireAuth, async (req, res) => {
+  try {
+    const { online } = req.body;
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    const { data, error} = await supabase
+      .from('profiles')
+      .update({
+        online_status: online === true,
+        last_seen: new Date().toISOString()
+      })
+      .eq('id', req.user.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    res.json({ status: data.online_status });
+  } catch (err) {
+    console.error('Update status error:', err);
+    res.status(500).json({ error: 'failed_to_update_status', message: err.message });
+  }
+});
+
+// ============ FRIEND ENDPOINTS ============
+
+// Search users by username
+app.get('/api/users/search', requireAuth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json({ users: [] });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, bio, profile_picture_url')
+      .ilike('username', `%${q}%`)
+      .neq('id', req.user.id)
+      .limit(20);
+    
+    if (error) throw error;
+    
+    res.json({ users: data || [] });
+  } catch (err) {
+    console.error('Search users error:', err);
+    res.status(500).json({ error: 'failed_to_search', message: err.message });
+  }
+});
+
+// Get user's friends list
+app.get('/api/friends', requireAuth, async (req, res) => {
+  try {
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    const { data, error } = await supabase
+      .from('friendships')
+      .select(`
+        friend_id,
+        profiles!friendships_friend_id_fkey (
+          id,
+          username,
+          bio,
+          tags,
+          profile_picture_url,
+          online_status,
+          last_seen
+        )
+      `)
+      .eq('user_id', req.user.id);
+    
+    if (error) throw error;
+    
+    const friends = data.map(f => f.profiles);
+    
+    // Sort: online friends first
+    friends.sort((a, b) => {
+      if (a.online_status && !b.online_status) return -1;
+      if (!a.online_status && b.online_status) return 1;
+      return 0;
+    });
+    
+    res.json({ friends });
+  } catch (err) {
+    console.error('Get friends error:', err);
+    res.status(500).json({ error: 'failed_to_get_friends', message: err.message });
+  }
+});
+
+// Send friend request
+app.post('/api/friends/request', requireAuth, async (req, res) => {
+  try {
+    const { to_user_id } = req.body;
+    
+    if (!to_user_id) {
+      return res.status(400).json({ error: 'missing_user_id', message: 'User ID required' });
+    }
+    
+    if (to_user_id === req.user.id) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Cannot send request to yourself' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    // Check if already friends
+    const { data: existing } = await supabase
+      .from('friendships')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .eq('friend_id', to_user_id)
+      .single();
+    
+    if (existing) {
+      return res.status(409).json({ error: 'already_friends', message: 'Already friends' });
+    }
+    
+    // Check for existing request
+    const { data: existingRequest } = await supabase
+      .from('friend_requests')
+      .select('id, status')
+      .or(`and(from_user_id.eq.${req.user.id},to_user_id.eq.${to_user_id}),and(from_user_id.eq.${to_user_id},to_user_id.eq.${req.user.id})`)
+      .single();
+    
+    if (existingRequest) {
+      if (existingRequest.status === 'pending') {
+        return res.status(409).json({ error: 'request_exists', message: 'Request already sent' });
+      }
+    }
+    
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .insert({
+        from_user_id: req.user.id,
+        to_user_id,
+        status: 'pending'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ error: 'request_exists', message: 'Request already sent' });
+      }
+      throw error;
+    }
+    
+    res.json({ request: data });
+  } catch (err) {
+    console.error('Send friend request error:', err);
+    res.status(500).json({ error: 'failed_to_send_request', message: err.message });
+  }
+});
+
+// Get pending friend requests
+app.get('/api/friends/requests', requireAuth, async (req, res) => {
+  try {
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .select(`
+        id,
+        from_user_id,
+        created_at,
+        profiles!friend_requests_from_user_id_fkey (
+          username,
+          bio,
+          profile_picture_url
+        )
+      `)
+      .eq('to_user_id', req.user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    res.json({ requests: data || [] });
+  } catch (err) {
+    console.error('Get requests error:', err);
+    res.status(500).json({ error: 'failed_to_get_requests', message: err.message });
+  }
+});
+
+// Accept friend request
+app.post('/api/friends/accept', requireAuth, async (req, res) => {
+  try {
+    const { request_id } = req.body;
+    
+    if (!request_id) {
+      return res.status(400).json({ error: 'missing_request_id', message: 'Request ID required' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .update({ status: 'accepted' })
+      .eq('id', request_id)
+      .eq('to_user_id', req.user.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (!data) {
+      return res.status(404).json({ error: 'request_not_found', message: 'Request not found' });
+    }
+    
+    res.json({ success: true, request: data });
+  } catch (err) {
+    console.error('Accept request error:', err);
+    res.status(500).json({ error: 'failed_to_accept', message: err.message });
+  }
+});
+
+// Reject friend request
+app.post('/api/friends/reject', requireAuth, async (req, res) => {
+  try {
+    const { request_id } = req.body;
+    
+    if (!request_id) {
+      return res.status(400).json({ error: 'missing_request_id', message: 'Request ID required' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    const { error } = await supabase
+      .from('friend_requests')
+      .delete()
+      .eq('id', request_id)
+      .eq('to_user_id', req.user.id);
+    
+    if (error) throw error;
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Reject request error:', err);
+    res.status(500).json({ error: 'failed_to_reject', message: err.message });
   }
 });
 
