@@ -6,6 +6,30 @@ import { setupARControls } from './ar-controller.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Fetch and display pending friend requests count
+async function updateRequestsBadge() {
+  try {
+    const response = await fetch('/api/friends/requests', {
+      credentials: 'include'
+    });
+    if (!response.ok) return;
+    
+    const { requests } = await response.json();
+    const badge = $('requestsBadge');
+    
+    if (!badge) return;
+    
+    if (requests && requests.length > 0) {
+      badge.textContent = requests.length > 9 ? '9+' : requests.length;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  } catch (err) {
+    console.error('Failed to fetch friend requests count:', err);
+  }
+}
+
 // Initialize app - check auth before setting up UI
 async function init() {
   const isAuthenticated = await checkAuth();
@@ -26,6 +50,12 @@ async function init() {
   
   // Setup AR controls
   setupARControls();
+  
+  // Update friend requests badge
+  updateRequestsBadge();
+  
+  // Refresh badge every 30 seconds
+  setInterval(updateRequestsBadge, 30000);
 }
 
 // Start the app
