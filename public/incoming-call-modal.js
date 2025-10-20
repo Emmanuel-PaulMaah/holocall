@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 // Create modal HTML
 export function createIncomingCallModal() {
   const modalHTML = `
-    <div id="incomingCallModal" class="call-modal" hidden>
+    <div id="incomingCallModal" class="call-modal" hidden style="display: none;">
       <div class="call-modal-overlay"></div>
       <div class="call-modal-content">
         <div class="call-modal-header">
@@ -48,6 +48,8 @@ export function createIncomingCallModal() {
   // Attach event listeners
   $('acceptCallBtn').addEventListener('click', handleAcceptCall);
   $('declineCallBtn').addEventListener('click', handleDeclineCall);
+  
+  console.log('Incoming call modal created and hidden');
 }
 
 // Show incoming call modal
@@ -87,6 +89,7 @@ export function showIncomingCall(callData, callbacks = {}) {
   
   // Show modal
   modal.hidden = false;
+  modal.style.display = 'flex';
   
   // Auto-dismiss after 30 seconds
   dismissTimeout = setTimeout(() => {
@@ -159,11 +162,15 @@ async function handleDeclineCall() {
 // Dismiss modal
 function dismissIncomingCall() {
   const modal = $('incomingCallModal');
-  modal.hidden = true;
+  if (modal) {
+    modal.hidden = true;
+    modal.style.display = 'none';
+  }
   clearTimeout(dismissTimeout);
   currentCallData = null;
   onAcceptCallback = null;
   onDeclineCallback = null;
+  console.log('Incoming call modal dismissed');
 }
 
 // Hash string for consistent avatar colors

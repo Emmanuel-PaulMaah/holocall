@@ -18,7 +18,7 @@ async function initSupabase() {
   const config = await configResponse.json();
   
   const { createClient } = window.supabase;
-  supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+  supabase = createClient(config.supabaseUrl, config.supabaseKey);
   
   // Get current user from our backend session
   const userResponse = await fetch('/api/auth/user', { credentials: 'include' });
