@@ -1,4 +1,5 @@
 import { initiateCall, generateCallLink } from './call-notifications.js';
+import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -361,7 +362,14 @@ async function init() {
   const user = await checkAuth();
   if (!user) return;
   
+  // Start online presence tracking
+  startPresenceTracking();
+  
   await loadFriends();
 }
 
 init();
+
+// Stop presence tracking on page unload
+window.addEventListener('beforeunload', stopPresenceTracking);
+window.addEventListener('pagehide', stopPresenceTracking);

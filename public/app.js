@@ -5,32 +5,10 @@ import { join, leave, toggleMic, toggleCam } from './connection-manager.js';
 import { setupARControls } from './ar-controller.js';
 import { subscribeToCallNotifications, unsubscribeFromCallNotifications } from './call-notifications.js';
 import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
+import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
 
 const $ = (id) => document.getElementById(id);
 
-// Fetch and display pending friend requests count
-async function updateRequestsBadge() {
-  try {
-    const response = await fetch('/api/friends/requests', {
-      credentials: 'include'
-    });
-    if (!response.ok) return;
-    
-    const { requests } = await response.json();
-    const badge = $('requestsBadge');
-    
-    if (!badge) return;
-    
-    if (requests && requests.length > 0) {
-      badge.textContent = requests.length > 9 ? '9+' : requests.length;
-      badge.hidden = false;
-    } else {
-      badge.hidden = true;
-    }
-  } catch (err) {
-    console.error('Failed to fetch friend requests count:', err);
-  }
-}
 
 // Handle incoming call
 function handleIncomingCall(callData) {
@@ -111,12 +89,6 @@ async function init() {
   // Setup AR controls
   setupARControls();
   
-  // Update friend requests badge
-  updateRequestsBadge();
-  
-  // Refresh badge every 30 seconds
-  setInterval(updateRequestsBadge, 30000);
-  
   // Create incoming call modal
   createIncomingCallModal();
   
@@ -126,6 +98,9 @@ async function init() {
     onCallAnswered: handleCallAnswered,
     onCallDeclined: handleCallDeclined
   });
+  
+  // Start online presence tracking
+  startPresenceTracking();
   
   // Check for auto-join from URL
   checkAutoJoinFromURL();
@@ -138,13 +113,15 @@ init();
 window.addEventListener('pagehide', () => { 
   if (state.joined) { 
     try { leave(); } catch {} 
-  } 
+  }
+  stopPresenceTracking();
 });
 
 window.addEventListener('beforeunload', () => { 
   if (state.joined) { 
     try { leave(); } catch {} 
-  } 
+  }
+  stopPresenceTracking();
 });
 
 window.addEventListener('pageshow', () => { 
