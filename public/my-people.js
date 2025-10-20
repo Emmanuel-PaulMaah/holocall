@@ -1,3 +1,5 @@
+import { initiateCall, generateCallLink } from './call-notifications.js';
+
 const $ = (id) => document.getElementById(id);
 
 let currentUser = null;
@@ -117,30 +119,38 @@ function createFriendCard(friend, index, total) {
   return card;
 }
 
-function generateRoomId(friendId) {
-  const timestamp = Date.now();
-  return `${currentUser.id}_${friendId}_${timestamp}`;
-}
-
 async function handleCall(friend) {
   const isOnline = friend.online_status;
-  const roomId = generateRoomId(friend.id);
   
   if (isOnline) {
     showToast(`Calling ${friend.username}...`);
     
+    const callData = await initiateCall(friend);
+    
     setTimeout(() => {
-      window.location.href = `/?room=${roomId}`;
-    }, 500);
+      window.location.href = `/call/${callData.roomId}`;
+    }, 800);
   } else {
-    const baseUrl = window.location.origin;
-    const callLink = `${baseUrl}/?room=${roomId}`;
+    const { roomId, url } = generateCallLink();
     
     try {
-      await navigator.clipboard.writeText(callLink);
-      showToast(`Call link copied! Share it with ${friend.username}`);
+      await navigator.clipboard.writeText(url);
+      showToast(`Call link copied! Share: ${roomId}`);
     } catch (err) {
-      showToast(`Call link: ${callLink}`);
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'HoloCall',
+            text: `Join my video call: ${roomId}`,
+            url: url
+          });
+          showToast('Link shared successfully!');
+        } else {
+          showToast(`Call link: ${roomId}`);
+        }
+      } catch (shareErr) {
+        showToast(`Call link: ${roomId}`);
+      }
     }
   }
 }

@@ -52,7 +52,7 @@
 
     <!-- top controls -->
     <div class="row controls">
-      <input id="room" placeholder="room name (e.g. arrakis)" autocomplete="off" />
+      <input id="roomInput" placeholder="room name (e.g. arrakis)" autocomplete="off" />
       <button id="joinBtn" class="primary">Join</button>
 
       <!-- legacy buttons (hidden via CSS) -->
@@ -109,6 +109,9 @@
     <!-- AR exit button -->
     <button id="arClose" class="ar-close" hidden aria-label="Exit AR">&times;</button>
 
+    <!-- supabase client for realtime -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- external app script -->
     <script type="module" src="/app.js"></script>
   </body>

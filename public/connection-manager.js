@@ -192,10 +192,10 @@ function attachRemoteTrack(track, pub) {
 
 /* ---------------- join / leave ---------------- */
 export async function join() {
-  const room = $('room').value.trim();
+  const room = $('roomInput').value.trim();
   if (!room) { 
     showToast('enter a room name'); 
-    $('room')?.focus(); 
+    $('roomInput')?.focus(); 
     return; 
   }
 
