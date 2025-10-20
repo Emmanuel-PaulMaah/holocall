@@ -47,24 +47,28 @@ export async function subscribeToCallNotifications(handlers = {}) {
   
   callChannel = supabase.channel(channelName)
     .on('broadcast', { event: 'incoming_call' }, (payload) => {
-      console.log('Incoming call:', payload);
-      if (incomingCallHandler) {
+      console.log('Incoming call received:', payload);
+      if (payload && payload.payload && incomingCallHandler) {
         incomingCallHandler(payload.payload);
+      } else {
+        console.error('Invalid call payload:', payload);
       }
     })
     .on('broadcast', { event: 'call_answered' }, (payload) => {
       console.log('Call answered:', payload);
-      if (callAnsweredHandler) {
+      if (payload && payload.payload && callAnsweredHandler) {
         callAnsweredHandler(payload.payload);
       }
     })
     .on('broadcast', { event: 'call_declined' }, (payload) => {
       console.log('Call declined:', payload);
-      if (callDeclinedHandler) {
+      if (payload && payload.payload && callDeclinedHandler) {
         callDeclinedHandler(payload.payload);
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`Channel subscription status: ${status}`);
+    });
   
   console.log(`Subscribed to call notifications on channel: ${channelName}`);
 }

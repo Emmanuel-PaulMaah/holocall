@@ -52,11 +52,24 @@ export function createIncomingCallModal() {
 
 // Show incoming call modal
 export function showIncomingCall(callData, callbacks = {}) {
+  console.log('showIncomingCall called with:', callData);
+  
+  // Validate call data
+  if (!callData || !callData.roomId || !callData.callerName) {
+    console.error('Cannot show call modal: invalid call data', callData);
+    return;
+  }
+  
   currentCallData = callData;
   onAcceptCallback = callbacks.onAccept;
   onDeclineCallback = callbacks.onDecline;
   
   const modal = $('incomingCallModal');
+  if (!modal) {
+    console.error('Incoming call modal element not found');
+    return;
+  }
+  
   const avatar = $('callerAvatar');
   const name = $('callerName');
   
@@ -93,33 +106,53 @@ export function showIncomingCall(callData, callbacks = {}) {
 
 // Handle accept call
 async function handleAcceptCall() {
-  if (!currentCallData) return;
+  console.log('Accept button clicked, callData:', currentCallData);
+  
+  if (!currentCallData) {
+    console.error('No call data available');
+    return;
+  }
   
   clearTimeout(dismissTimeout);
   
-  // Send answered notification
-  await sendCallAnswered(currentCallData.callerId, currentCallData.roomId);
-  
-  dismissIncomingCall();
-  
-  if (onAcceptCallback) {
-    onAcceptCallback(currentCallData);
+  try {
+    // Send answered notification
+    await sendCallAnswered(currentCallData.callerId, currentCallData.roomId);
+    
+    dismissIncomingCall();
+    
+    if (onAcceptCallback) {
+      onAcceptCallback(currentCallData);
+    }
+  } catch (err) {
+    console.error('Error accepting call:', err);
   }
 }
 
 // Handle decline call
 async function handleDeclineCall() {
-  if (!currentCallData) return;
+  console.log('Decline button clicked, callData:', currentCallData);
+  
+  if (!currentCallData) {
+    console.error('No call data available');
+    dismissIncomingCall();
+    return;
+  }
   
   clearTimeout(dismissTimeout);
   
-  // Send declined notification
-  await sendCallDeclined(currentCallData.callerId, currentCallData.roomId);
-  
-  dismissIncomingCall();
-  
-  if (onDeclineCallback) {
-    onDeclineCallback(currentCallData);
+  try {
+    // Send declined notification
+    await sendCallDeclined(currentCallData.callerId, currentCallData.roomId);
+    
+    dismissIncomingCall();
+    
+    if (onDeclineCallback) {
+      onDeclineCallback(currentCallData);
+    }
+  } catch (err) {
+    console.error('Error declining call:', err);
+    dismissIncomingCall();
   }
 }
 

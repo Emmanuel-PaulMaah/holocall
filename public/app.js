@@ -34,6 +34,13 @@ async function updateRequestsBadge() {
 
 // Handle incoming call
 function handleIncomingCall(callData) {
+  console.log('handleIncomingCall called with:', callData);
+  
+  if (!callData || !callData.roomId || !callData.callerName) {
+    console.error('Invalid call data received:', callData);
+    return;
+  }
+  
   if (state.joined) {
     console.log('Already in a call, ignoring incoming call');
     return;
@@ -41,11 +48,13 @@ function handleIncomingCall(callData) {
   
   showIncomingCall(callData, {
     onAccept: async (data) => {
+      console.log('Call accepted, joining room:', data.roomId);
       $('roomInput').value = data.roomId;
       await join();
       showToast(`Connected with ${data.callerName}`);
     },
     onDecline: (data) => {
+      console.log('Call declined');
       showToast('Call declined');
     }
   });
