@@ -27,7 +27,13 @@ h1{font-size:16px;font-weight:600;margin:0;color:var(--sub)}
 }
 .quality-selector:hover{border-color:#2a2a2a}
 .quality-selector:focus{outline:none;border-color:var(--focus)}
-.user-name{color:var(--text);font-size:14px;font-weight:500}
+.user-name{
+  color:var(--text);font-size:14px;font-weight:500;
+  text-decoration:none;transition:color 0.2s;
+}
+.user-name:hover{
+  color:var(--accent);cursor:pointer;
+}
 .logout-btn{
   padding:6px 12px;background:rgba(255,77,79,.1);color:var(--danger);
   border:1px solid rgba(255,77,79,.2);border-radius:8px;cursor:pointer;
@@ -51,6 +57,12 @@ h1{font-size:16px;font-weight:600;margin:0;color:var(--sub)}
 .nav-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
 .nav-link:hover svg{opacity:1}
 .nav-link:active{transform:scale(.98)}
+.nav-link.disabled{
+  opacity:0.4;cursor:not-allowed;pointer-events:auto;
+}
+.nav-link.disabled:hover{
+  background:transparent;color:var(--text-light);
+}
 .nav-badge{
   position:absolute;top:-4px;right:-4px;
   background:var(--danger);color:#fff;
@@ -220,7 +232,11 @@ canvas.ar-layer{
 }
 body.ar-active h1,
 body.ar-active .controls,
-body.ar-active #videos{ display:none !important; }
+body.ar-active #videos,
+body.ar-active .main-nav,
+body.ar-active .quality-selector,
+body.ar-active .user-name,
+body.ar-active .logout-btn{ display:none !important; }
 body.ar-active .ar-close{ display:block !important; }
 
 /* responsive */

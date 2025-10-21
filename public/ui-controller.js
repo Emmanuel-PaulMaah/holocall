@@ -156,6 +156,20 @@ export function setUIState({joined = state.joined, micOn = state.micOn, camOn = 
   setDisabled('muteBtn', !joined); 
   setDisabled('camBtn', !joined);
   
+  // Disable/enable navigation links during calls
+  const navLinks = document.querySelectorAll('.main-nav .nav-link');
+  navLinks.forEach(link => {
+    if (joined) {
+      link.classList.add('disabled');
+      link.setAttribute('aria-disabled', 'true');
+      link.addEventListener('click', preventNavigation);
+    } else {
+      link.classList.remove('disabled');
+      link.removeAttribute('aria-disabled');
+      link.removeEventListener('click', preventNavigation);
+    }
+  });
+  
   if (icon.mute) { 
     icon.mute.setAttribute('aria-pressed', String(micOn)); 
     icon.mute.classList.toggle('is-muted', !micOn); 
@@ -164,6 +178,12 @@ export function setUIState({joined = state.joined, micOn = state.micOn, camOn = 
     icon.cam.setAttribute('aria-pressed', String(camOn));  
     icon.cam.classList.toggle('is-camoff', !camOn); 
   }
+}
+
+// Prevent navigation when nav links are disabled
+function preventNavigation(e) {
+  e.preventDefault();
+  showToast('Cannot navigate while in a call');
 }
 
 export function recalcHoloVisibility() { 
