@@ -450,9 +450,6 @@ function createAvatarOutline() {
   // Add to scene
   scene.add(avatarOutline);
   
-  // Set initial position and scale
-  updateAvatarOutline();
-  
   console.log('Avatar outline created');
 }
 
