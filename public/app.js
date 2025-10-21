@@ -27,9 +27,16 @@ function handleIncomingCall(callData) {
   showIncomingCall(callData, {
     onAccept: async (data) => {
       console.log('Call accepted, joining room:', data.roomId);
-      $('roomInput').value = data.roomId;
-      await join();
-      showToast(`Connected with ${data.callerName}`);
+      
+      // If on index.html, join directly
+      if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+        $('roomInput').value = data.roomId;
+        await join();
+        showToast(`Connected with ${data.callerName}`);
+      } else {
+        // Navigate to index.html with room parameter
+        window.location.href = `/?room=${data.roomId}`;
+      }
     },
     onDecline: (data) => {
       console.log('Call declined');
@@ -50,13 +57,33 @@ function handleCallDeclined(data) {
 
 // Check URL for auto-join room
 function checkAutoJoinFromURL() {
+  // Check for ?room= query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomParam = urlParams.get('room');
+  
+  if (roomParam) {
+    const roomId = roomParam.trim();
+    $('roomInput').value = roomId;
+    showToast(`Joining room: ${roomId}`);
+    
+    setTimeout(() => {
+      if (!state.joined) {
+        join();
+      }
+    }, 1000);
+    
+    window.history.replaceState({}, '', '/');
+    return;
+  }
+  
+  // Also check for legacy /call/room-id pattern
   const path = window.location.pathname;
   const match = path.match(/^\/call\/([a-z]+-[a-z]+-[a-z]+)$/i);
   
   if (match && match[1]) {
     const roomId = match[1];
     $('roomInput').value = roomId;
-    showToast(`Auto-joining room: ${roomId}`);
+    showToast(`Joining room: ${roomId}`);
     
     setTimeout(() => {
       if (!state.joined) {

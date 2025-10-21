@@ -129,7 +129,7 @@ async function handleCall(friend) {
     const callData = await initiateCall(friend);
     
     setTimeout(() => {
-      window.location.href = `/call/${callData.roomId}`;
+      window.location.href = `/?room=${callData.roomId}`;
     }, 800);
   } else {
     const { roomId, url } = generateCallLink();

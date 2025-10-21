@@ -160,7 +160,7 @@ export async function initiateCall(friend) {
   return {
     roomId,
     isOnline: friend.online_status,
-    shareableUrl: `${window.location.origin}/call/${roomId}`
+    shareableUrl: `${window.location.origin}/?room=${roomId}`
   };
 }
 
@@ -177,6 +177,6 @@ export function generateCallLink() {
   const roomId = generateRoomId();
   return {
     roomId,
-    url: `${window.location.origin}/call/${roomId}`
+    url: `${window.location.origin}/?room=${roomId}`
   };
 }
