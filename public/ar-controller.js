@@ -319,13 +319,20 @@ async function loadRemoteAvatar() {
         // Scale avatar to reasonable size (RPM avatars are typically human-sized)
         avatarModel.scale.set(0.5, 0.5, 0.5);
         
-        // Position avatar behind the video plane (relative to video plane)
-        avatarModel.position.set(0, 0, -0.3); // Slightly behind in local space
-        
-        // Parent avatar to video plane so gestures move them together
+        // Position avatar independently in the room (separate from video plane)
+        // Place it to the right and slightly forward of where video plane would be
         if (videoPlane) {
-          videoPlane.add(avatarModel);
+          // Use video plane position as reference but place avatar separately
+          avatarModel.position.copy(videoPlane.position);
+          avatarModel.position.x += 0.5; // 0.5m to the right
+          avatarModel.rotation.copy(videoPlane.rotation);
+        } else {
+          // Fallback position if video plane not yet placed
+          avatarModel.position.set(0.5, 0, -1);
         }
+        
+        // Add to scene independently (not parented to video plane)
+        scene.add(avatarModel);
         
         console.log('Avatar loaded successfully');
         showToast('3D Avatar loaded!');
