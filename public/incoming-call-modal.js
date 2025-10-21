@@ -93,9 +93,15 @@ export function showIncomingCall(callData, callbacks = {}) {
   
   // Auto-dismiss after 30 seconds
   dismissTimeout = setTimeout(() => {
+    // Save callback and data before dismissing (dismiss clears them)
+    const callback = onDeclineCallback;
+    const data = currentCallData;
+    
     dismissIncomingCall();
-    if (onDeclineCallback) {
-      onDeclineCallback(callData);
+    
+    // Call decline callback after auto-dismiss (using saved reference)
+    if (callback && data) {
+      callback(data);
     }
   }, 30000);
   
@@ -118,14 +124,19 @@ async function handleAcceptCall() {
   
   clearTimeout(dismissTimeout);
   
+  // Save callback and data before dismissing (dismiss clears them)
+  const callback = onAcceptCallback;
+  const data = currentCallData;
+  
   try {
     // Send answered notification
-    await sendCallAnswered(currentCallData.callerId, currentCallData.roomId);
+    await sendCallAnswered(data.callerId, data.roomId);
     
     dismissIncomingCall();
     
-    if (onAcceptCallback) {
-      onAcceptCallback(currentCallData);
+    // Call callback after dismiss (using saved reference)
+    if (callback) {
+      callback(data);
     }
   } catch (err) {
     console.error('Error accepting call:', err);
@@ -144,14 +155,19 @@ async function handleDeclineCall() {
   
   clearTimeout(dismissTimeout);
   
+  // Save callback and data before dismissing (dismiss clears them)
+  const callback = onDeclineCallback;
+  const data = currentCallData;
+  
   try {
     // Send declined notification
-    await sendCallDeclined(currentCallData.callerId, currentCallData.roomId);
+    await sendCallDeclined(data.callerId, data.roomId);
     
     dismissIncomingCall();
     
-    if (onDeclineCallback) {
-      onDeclineCallback(currentCallData);
+    // Call callback after dismiss (using saved reference)
+    if (callback) {
+      callback(data);
     }
   } catch (err) {
     console.error('Error declining call:', err);

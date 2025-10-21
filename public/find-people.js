@@ -1,3 +1,5 @@
+import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
+
 const $ = (id) => document.getElementById(id);
 
 let currentUser = null;
@@ -288,4 +290,7 @@ $('searchBtn').addEventListener('click', () => {
   await checkAuth();
   await loadFriendsAndRequests();
   $('searchInput').focus();
+  
+  // Start online presence tracking
+  startPresenceTracking();
 })();

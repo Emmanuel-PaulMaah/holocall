@@ -1,4 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
 
 let supabase;
 let currentUser = null;
@@ -232,4 +233,7 @@ $('profileForm').addEventListener('submit', async (e) => {
 (async () => {
   await checkAuth();
   await loadProfile();
+  
+  // Start online presence tracking
+  startPresenceTracking();
 })();
