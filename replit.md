@@ -17,9 +17,9 @@ The application is built with a Node.js + Express backend for API services and a
 ### Feature Specifications
 - **User Authentication:** Login/signup, password reset via email, and session management using Supabase Auth with HTTP-only cookies.
 - **International Video Calls:** Real-time video and audio streaming via LiveKit, supporting cross-device communication.
-- **WebXR AR Mode:** Places remote video feeds as 3D planes in an augmented reality space. Supports hit-test based placement, fallback to camera-relative placement, and touch gesture controls for repositioning (single-finger drag) and resizing (two-finger pinch/spread).
+- **WebXR AR Mode:** Places remote video feeds as 3D planes in an augmented reality space. Supports hit-test based placement, fallback to camera-relative placement, and touch gesture controls for repositioning (single-finger drag) and resizing (two-finger pinch/spread). Ready Player Me 3D avatars load automatically in AR mode when users have set their avatar URL, appearing behind video planes and moving together during gestures.
 - **In-Call Controls:** Mute, camera toggle, leave call confirmation, and a video quality selector (360p, 720p, 1080p) with live switching. Optimized bitrates (360p: 600 kbps, 720p: 1 Mbps, 1080p: 2 Mbps) and simulcast are enabled.
-- **Social Features:** User profiles with customizable usernames, bios, interests, and profile pictures. A friend network allows searching users, sending/receiving/accepting friend requests with real-time notifications, and managing friendships. The "My People" interface displays friends with online status and quick-call options.
+- **Social Features:** User profiles with customizable usernames, bios, interests, profile pictures, and Ready Player Me avatar URLs. A friend network allows searching users, sending/receiving/accepting friend requests with real-time notifications, and managing friendships. The "My People" interface displays friends with online status and quick-call options.
 
 ### System Design Choices
 The application uses an Express server (`server/index.js`) to serve static frontend files from the `/public` directory. Authentication is handled server-side via Supabase, creating secure, HTTP-only session cookies with a 7-day expiry. API endpoints for configuration, authentication, user data, and LiveKit token generation are protected. The architecture is stateless, designed for Replit Autoscale deployment. Error handling is robust, providing clear, actionable messages for network, permission, and device-related issues, with graceful degradation and automatic cleanup. CORS is strictly validated against trusted domains.
@@ -30,9 +30,10 @@ The application uses an Express server (`server/index.js`) to serve static front
 
 -   **LiveKit:** Real-time communication (SFU) infrastructure for video and audio calls.
 -   **Supabase:** Provides user authentication, database services (for profiles, friend requests, friendships), and Supabase Storage for profile picture uploads.
--   **Three.js:** JavaScript 3D library used for rendering in WebXR AR mode.
+-   **Three.js:** JavaScript 3D library used for rendering in WebXR AR mode and loading GLTF 3D models.
 -   **WebXR API:** Browser API enabling augmented reality experiences.
 -   **web-push:** Node.js library for sending web push notifications with VAPID authentication.
+-   **Ready Player Me:** 3D avatar platform providing customizable GLB avatars that appear in AR Holo Mode during calls.
 
 ## Recent Changes
 ### 2025-10-21
@@ -44,4 +45,6 @@ The application uses an Express server (`server/index.js`) to serve static front
 - **Call Sounds:** Implemented Web Audio API-based call sounds - ringing (440Hz/550Hz alternating tones for recipients) and buzzing (200Hz vibration pattern for callers).
 - **Navigation Restructure:** Moved Profile from navigation panel to clickable username link in header. Navigation panel now contains only "My People" and "Find People" links. Username displays with hover effects (accent color on hover).
 - **UI State Management:** Navigation links are disabled (grayed out, aria-disabled) during active calls; clicking shows toast message. During Holo Mode (WebXR AR), all UI elements hidden except AR exit button via `body.ar-active` class.
-- **Database Requirements:** Added `push_subscription` JSONB column requirement to profiles table (see SUPABASE_SETUP.md).
+- **Ready Player Me 3D Avatars:** Integrated Ready Player Me avatars in AR Holo Mode. Users set avatar GLB URLs in profile settings. When entering AR during calls, remote participants' avatars load automatically using GLTFLoader, scale to 0.5x (human size), and parent to video planes for synchronized gesture control (drag/pinch). Comprehensive texture disposal (map, normalMap, roughnessMap, metalnessMap, aoMap, emissiveMap, etc.) prevents GPU memory leaks when exiting AR mode. LiveKit identity uses actual Supabase user UUID for avatar loading.
+- **Call Timeout Extended:** Increased incoming call timeout from 30 to 60 seconds with matching progress indicator animation.
+- **Database Requirements:** Added `push_subscription` JSONB and `avatar_url` TEXT column requirements to profiles table (see SUPABASE_SETUP.md).

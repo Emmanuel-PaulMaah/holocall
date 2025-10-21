@@ -1,7 +1,7 @@
 // AR Controller - WebXR/AR functionality
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state, showToast, holoBtn, arClose } from './ui-controller.js';
 import { makeVideoTinyVisible } from './connection-manager.js';
 
