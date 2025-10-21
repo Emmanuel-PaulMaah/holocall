@@ -109,6 +109,14 @@ export async function startHoloMode() {
     // scene/camera
     scene = new THREE.Scene(); 
     camera = new THREE.PerspectiveCamera();
+    
+    // Add lighting for 3D avatars
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 1, 1);
+    scene.add(directionalLight);
 
     // reticle (for hit-test path)
     const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
