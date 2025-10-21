@@ -24,9 +24,19 @@ The application is built with a Node.js + Express backend for API services and a
 ### System Design Choices
 The application uses an Express server (`server/index.js`) to serve static frontend files from the `/public` directory. Authentication is handled server-side via Supabase, creating secure, HTTP-only session cookies with a 7-day expiry. API endpoints for configuration, authentication, user data, and LiveKit token generation are protected. The architecture is stateless, designed for Replit Autoscale deployment. Error handling is robust, providing clear, actionable messages for network, permission, and device-related issues, with graceful degradation and automatic cleanup. CORS is strictly validated against trusted domains.
 
+**Web Push Notifications:** Implemented via service worker (`service-worker.js`) to deliver incoming call notifications across all pages and even when the app is in the background. Uses VAPID keys for secure push delivery, with JWT-based one-time decline tokens to prevent replay attacks. Push subscriptions are stored in the profiles table.
+
 ## External Dependencies
 
 -   **LiveKit:** Real-time communication (SFU) infrastructure for video and audio calls.
 -   **Supabase:** Provides user authentication, database services (for profiles, friend requests, friendships), and Supabase Storage for profile picture uploads.
 -   **Three.js:** JavaScript 3D library used for rendering in WebXR AR mode.
 -   **WebXR API:** Browser API enabling augmented reality experiences.
+-   **web-push:** Node.js library for sending web push notifications with VAPID authentication.
+
+## Recent Changes
+### 2025-10-21
+- **Fixed Call Acceptance Flow:** Changed navigation from non-existent `/call/room-id` to `/?room=room-id` using existing index.html. Both caller and receiver now properly join calls without 404 errors.
+- **Web Push Notifications:** Implemented service worker-based push notifications for cross-page call alerts. Users receive incoming call notifications even when on different pages or app is in background. Features secure JWT-based decline tokens (one-time use, 1-minute expiry) to prevent replay attacks.
+- **Online Presence Tracking:** Fixed presence system to reliably mark users offline when leaving pages using `navigator.sendBeacon` in `stopPresenceTracking()`.
+- **Database Requirements:** Added `push_subscription` JSONB column requirement to profiles table (see SUPABASE_SETUP.md).

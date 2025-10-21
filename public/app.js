@@ -6,6 +6,7 @@ import { setupARControls } from './ar-controller.js';
 import { subscribeToCallNotifications, unsubscribeFromCallNotifications } from './call-notifications.js';
 import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
 import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
+import { initPushNotifications } from './push-notifications.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -128,6 +129,15 @@ async function init() {
   
   // Start online presence tracking
   startPresenceTracking();
+  
+  // Initialize push notifications (request permission)
+  initPushNotifications().then(success => {
+    if (success) {
+      console.log('Push notifications enabled');
+    } else {
+      console.log('Push notifications not available or denied');
+    }
+  });
   
   // Check for auto-join from URL
   checkAutoJoinFromURL();

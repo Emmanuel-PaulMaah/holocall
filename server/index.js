@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import { AccessToken } from 'livekit-server-sdk';
 import { createClient } from '@supabase/supabase-js';
+import webpush from 'web-push';
 
 const app = express();
 
@@ -111,6 +112,33 @@ if (!JWT_SECRET) {
   console.error('Please set JWT_SECRET in your environment variables.');
   process.exit(1);
 }
+
+// Configure web push
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:support@holocall.app',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  console.log('✅ Web Push configured');
+} else {
+  console.warn('⚠️ VAPID keys not configured - push notifications disabled');
+}
+
+// Track used decline tokens with expiry times to prevent replay attacks
+const usedDeclineTokens = new Map(); // token -> expiryTime
+// Clean up expired tokens every 30 seconds
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, expiry] of usedDeclineTokens.entries()) {
+    if (expiry < now) {
+      usedDeclineTokens.delete(token);
+    }
+  }
+}, 30000);
 
 function getSupabaseClient() {
   const url = process.env.SUPABASE_URL;
@@ -262,7 +290,8 @@ app.get('/api/config', (req, res) => {
   res.json({ 
     livekitUrl: process.env.LIVEKIT_URL || '',
     supabaseUrl: process.env.SUPABASE_URL || '',
-    supabaseKey: process.env.SUPABASE_ANON_KEY || ''
+    supabaseKey: process.env.SUPABASE_ANON_KEY || '',
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY || ''
   });
 });
 
@@ -597,6 +626,172 @@ app.post('/api/friends/reject', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Reject request error:', err);
     res.status(500).json({ error: 'failed_to_reject', message: err.message });
+  }
+});
+
+// ============ PUSH NOTIFICATION ENDPOINTS ============
+
+// Subscribe to push notifications
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const subscription = req.body;
+    
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: 'invalid_subscription', message: 'Invalid push subscription' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    // Store subscription in profiles table
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        push_subscription: subscription,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.id)
+      .select();
+    
+    if (error) throw error;
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Subscribe push error:', err);
+    res.status(500).json({ error: 'failed_to_subscribe', message: err.message });
+  }
+});
+
+// Decline call from service worker with secure token
+app.post('/api/push/decline-call', async (req, res) => {
+  try {
+    const { callerId, roomId, token } = req.body;
+    
+    if (!callerId || !roomId || !token) {
+      return res.status(400).json({ error: 'missing_data', message: 'Caller ID, room ID, and token required' });
+    }
+    
+    // Check if token was already used
+    if (usedDeclineTokens.has(token)) {
+      return res.status(403).json({ error: 'token_used', message: 'Decline token already used' });
+    }
+    
+    // Verify the token
+    let tokenExpiry;
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      
+      // Check token is for this specific call
+      if (decoded.callerId !== callerId || decoded.roomId !== roomId) {
+        return res.status(403).json({ error: 'invalid_token', message: 'Token mismatch' });
+      }
+      
+      // Check token hasn't expired (1 minute max)
+      const tokenAge = Date.now() - decoded.timestamp;
+      if (tokenAge > 60000) {
+        return res.status(403).json({ error: 'token_expired', message: 'Decline token expired' });
+      }
+      
+      // Calculate when this token will expire
+      tokenExpiry = decoded.timestamp + 60000;
+    } catch (err) {
+      return res.status(403).json({ error: 'invalid_token', message: 'Invalid decline token' });
+    }
+    
+    // Mark token as used with its expiry time
+    usedDeclineTokens.set(token, tokenExpiry);
+    
+    // Create temporary Supabase client
+    const supabase = getSupabaseClient();
+    
+    // Send decline broadcast
+    const channelName = `call:${callerId}`;
+    const channel = supabase.channel(channelName);
+    
+    await channel.subscribe();
+    
+    await channel.send({
+      type: 'broadcast',
+      event: 'call_declined',
+      payload: { roomId, declinedBy: 'service-worker' }
+    });
+    
+    await channel.unsubscribe();
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Decline call from SW error:', err);
+    res.status(500).json({ error: 'failed_to_decline', message: err.message });
+  }
+});
+
+// Send push notification to a user
+app.post('/api/push/send', requireAuth, async (req, res) => {
+  try {
+    const { user_id, title, body, data } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ error: 'missing_user_id', message: 'User ID required' });
+    }
+    
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      return res.status(503).json({ error: 'push_disabled', message: 'Push notifications not configured' });
+    }
+    
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    // Get target user's push subscription
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('push_subscription')
+      .eq('id', user_id)
+      .single();
+    
+    if (error || !profile || !profile.push_subscription) {
+      return res.status(404).json({ error: 'no_subscription', message: 'User not subscribed to push' });
+    }
+    
+    // Generate a one-time decline token (valid for 1 minute)
+    const declineToken = jwt.sign({
+      callerId: data.callerId,
+      roomId: data.roomId,
+      timestamp: Date.now()
+    }, JWT_SECRET, {
+      expiresIn: '1m'
+    });
+    
+    const payload = JSON.stringify({
+      title: title || 'HoloCall',
+      body: body || 'New notification',
+      icon: '/icon.png',
+      badge: '/icon.png',
+      tag: 'holocall-notification',
+      ...data,
+      declineToken // Add secure token for service worker decline
+    });
+    
+    await webpush.sendNotification(profile.push_subscription, payload);
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Send push error:', err);
+    
+    // Handle expired subscriptions
+    if (err.statusCode === 410) {
+      // Remove expired subscription
+      try {
+        const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+        await supabase
+          .from('profiles')
+          .update({ push_subscription: null })
+          .eq('id', req.body.user_id);
+      } catch (cleanupErr) {
+        console.error('Failed to cleanup expired subscription:', cleanupErr);
+      }
+      
+      return res.status(410).json({ error: 'subscription_expired', message: 'Push subscription expired' });
+    }
+    
+    res.status(500).json({ error: 'failed_to_send_push', message: err.message });
   }
 });
 

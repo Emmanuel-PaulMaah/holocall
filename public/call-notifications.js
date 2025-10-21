@@ -98,6 +98,30 @@ export async function sendCallNotification(friendId, callerProfile, roomId) {
   
   console.log('Call notification sent to:', friendId);
   
+  // Also send web push notification
+  try {
+    await fetch('/api/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        user_id: friendId,
+        title: 'Incoming Call',
+        body: `${callerProfile.username} is calling you`,
+        data: {
+          roomId: roomId,
+          callerId: currentUserId,
+          callerName: callerProfile.username,
+          callerPhoto: callerProfile.profile_picture_url,
+          url: `/?room=${roomId}`
+        }
+      })
+    });
+    console.log('Push notification sent');
+  } catch (err) {
+    console.error('Failed to send push notification:', err);
+  }
+  
   // Unsubscribe after sending
   setTimeout(() => channel.unsubscribe(), 1000);
   
