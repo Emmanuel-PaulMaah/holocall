@@ -2,7 +2,7 @@
 // Shows caller info with Accept/Decline buttons
 
 import { sendCallAnswered, sendCallDeclined } from './call-notifications.js';
-import { startRingingSound, stopAllSounds } from './call-sounds.js';
+import { startRingingSound, stopAllSounds, initAudioForMobile } from './call-sounds.js';
 
 let currentCallData = null;
 let onAcceptCallback = null;
@@ -138,6 +138,9 @@ async function handleAcceptCall() {
     return;
   }
   
+  // Initialize audio context for mobile (requires user gesture)
+  initAudioForMobile();
+  
   clearTimeout(dismissTimeout);
   
   // Save callback and data before dismissing (dismiss clears them)
@@ -145,7 +148,7 @@ async function handleAcceptCall() {
   const data = currentCallData;
   
   try {
-    // Send answered notification
+    // Send answered notification to caller
     await sendCallAnswered(data.callerId, data.roomId);
     
     dismissIncomingCall();

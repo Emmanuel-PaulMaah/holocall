@@ -9,7 +9,28 @@ function getAudioContext() {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
+  // Resume audio context if suspended (required for mobile)
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
   return audioContext;
+}
+
+// Initialize audio on user gesture (for mobile support)
+export function initAudioForMobile() {
+  try {
+    const ctx = getAudioContext();
+    // Play silent tone to unlock audio on mobile
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    gainNode.gain.value = 0; // Silent
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.01);
+  } catch (err) {
+    console.warn('Failed to init audio:', err);
+  }
 }
 
 // Play a tone with specific frequency and duration

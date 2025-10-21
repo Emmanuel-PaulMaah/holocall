@@ -7,6 +7,7 @@ import { subscribeToCallNotifications, unsubscribeFromCallNotifications } from '
 import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
 import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
 import { initPushNotifications } from './push-notifications.js';
+import { stopAllSounds } from './call-sounds.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,9 +47,16 @@ function handleIncomingCall(callData) {
   });
 }
 
-// Handle call answered by friend
+// Handle call answered by friend (receiver accepted)
 function handleCallAnswered(data) {
-  showToast('Call connected!');
+  stopAllSounds();
+  // Navigate to the room when call is accepted
+  if (data && data.roomId) {
+    $('roomInput').value = data.roomId;
+    join();
+  } else {
+    showToast('Call connected!');
+  }
 }
 
 // Handle call declined by friend

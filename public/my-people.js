@@ -1,7 +1,7 @@
 import { initiateCall, generateCallLink, subscribeToCallNotifications } from './call-notifications.js';
 import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
 import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
-import { startBuzzingSound, stopAllSounds } from './call-sounds.js';
+import { startBuzzingSound, stopAllSounds, initAudioForMobile } from './call-sounds.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -126,6 +126,9 @@ async function handleCall(friend) {
   const isOnline = friend.online_status;
   
   if (isOnline) {
+    // Initialize audio context for mobile (requires user gesture)
+    initAudioForMobile();
+    
     showToast(`Calling ${friend.username}...`);
     
     // Start buzzing sound for caller
@@ -133,9 +136,8 @@ async function handleCall(friend) {
     
     const callData = await initiateCall(friend);
     
-    setTimeout(() => {
-      window.location.href = `/?room=${callData.roomId}`;
-    }, 800);
+    // Wait for receiver to accept - don't auto-join the room
+    // The onCallAnswered handler will navigate to the room
   } else {
     const { roomId, url } = generateCallLink();
     
@@ -394,9 +396,12 @@ async function init() {
   // Subscribe to call notifications
   subscribeToCallNotifications({
     onIncomingCall: handleIncomingCall,
-    onCallAnswered: () => {
+    onCallAnswered: (data) => {
       stopAllSounds();
-      showToast('Call connected!');
+      // Navigate to the room when call is accepted
+      if (data && data.roomId) {
+        window.location.href = `/?room=${data.roomId}`;
+      }
     },
     onCallDeclined: () => {
       stopAllSounds();
