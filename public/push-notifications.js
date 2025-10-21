@@ -155,7 +155,7 @@ async function sendDeclineNotification(callerId, roomId) {
 }
 
 // Initialize push notifications
-export async function initPushNotifications() {
+export async function initPushNotifications(showPrompt = false) {
   if (!checkBrowserSupport()) {
     console.log('Push notifications not supported in this browser');
     return false;
@@ -165,15 +165,27 @@ export async function initPushNotifications() {
     // Register service worker
     await registerServiceWorker();
     
-    // Request permission
-    const permission = await requestNotificationPermission();
+    // Check current permission status
+    const currentPermission = Notification.permission;
     
-    if (permission === 'granted') {
-      // Subscribe to push
+    if (currentPermission === 'granted') {
+      // Already granted, just subscribe
       await subscribeToPushNotifications();
       return true;
+    } else if (currentPermission === 'default' || showPrompt) {
+      // Never asked or explicitly requesting
+      const permission = await requestNotificationPermission();
+      
+      if (permission === 'granted') {
+        await subscribeToPushNotifications();
+        return true;
+      } else {
+        console.log('Notification permission denied');
+        return false;
+      }
     } else {
-      console.log('Notification permission denied');
+      // Permission denied, can't request again
+      console.log('Notification permission previously denied');
       return false;
     }
   } catch (err) {

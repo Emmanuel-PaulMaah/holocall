@@ -1,5 +1,7 @@
-import { initiateCall, generateCallLink } from './call-notifications.js';
+import { initiateCall, generateCallLink, subscribeToCallNotifications } from './call-notifications.js';
 import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
+import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
+import { startBuzzingSound, stopAllSounds } from './call-sounds.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -125,6 +127,9 @@ async function handleCall(friend) {
   
   if (isOnline) {
     showToast(`Calling ${friend.username}...`);
+    
+    // Start buzzing sound for caller
+    startBuzzingSound();
     
     const callData = await initiateCall(friend);
     
@@ -358,9 +363,46 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Handle incoming call
+function handleIncomingCall(callData) {
+  console.log('Incoming call received on My People page:', callData);
+  
+  if (!callData || !callData.roomId || !callData.callerName) {
+    console.error('Invalid call data received:', callData);
+    return;
+  }
+  
+  showIncomingCall(callData, {
+    onAccept: (data) => {
+      console.log('Call accepted, navigating to call page:', data.roomId);
+      window.location.href = `/?room=${data.roomId}`;
+    },
+    onDecline: (data) => {
+      console.log('Call declined');
+      showToast('Call declined');
+    }
+  });
+}
+
 async function init() {
   const user = await checkAuth();
   if (!user) return;
+  
+  // Create incoming call modal
+  createIncomingCallModal();
+  
+  // Subscribe to call notifications
+  subscribeToCallNotifications({
+    onIncomingCall: handleIncomingCall,
+    onCallAnswered: () => {
+      stopAllSounds();
+      showToast('Call connected!');
+    },
+    onCallDeclined: () => {
+      stopAllSounds();
+      showToast('Call was declined', true);
+    }
+  });
   
   // Start online presence tracking
   startPresenceTracking();

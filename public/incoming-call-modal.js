@@ -2,6 +2,7 @@
 // Shows caller info with Accept/Decline buttons
 
 import { sendCallAnswered, sendCallDeclined } from './call-notifications.js';
+import { startRingingSound, stopAllSounds } from './call-sounds.js';
 
 let currentCallData = null;
 let onAcceptCallback = null;
@@ -18,6 +19,11 @@ export function createIncomingCallModal() {
       <div class="call-modal-content">
         <div class="call-modal-header">
           <h3>Incoming Call</h3>
+          <button id="closeCallBtn" class="call-close-btn" aria-label="Ignore call">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
         </div>
         <div class="call-modal-body">
           <div class="caller-avatar" id="callerAvatar"></div>
@@ -48,8 +54,15 @@ export function createIncomingCallModal() {
   // Attach event listeners
   $('acceptCallBtn').addEventListener('click', handleAcceptCall);
   $('declineCallBtn').addEventListener('click', handleDeclineCall);
+  $('closeCallBtn').addEventListener('click', handleCloseCall);
   
   console.log('Incoming call modal created and hidden');
+}
+
+// Handle close/ignore call (silent dismiss without notifying caller)
+function handleCloseCall() {
+  console.log('Close button clicked - ignoring call');
+  dismissIncomingCall();
 }
 
 // Show incoming call modal
@@ -90,6 +103,9 @@ export function showIncomingCall(callData, callbacks = {}) {
   // Show modal
   modal.hidden = false;
   modal.style.display = 'flex';
+  
+  // Start ringing sound for recipient
+  startRingingSound();
   
   // Auto-dismiss after 30 seconds
   dismissTimeout = setTimeout(() => {
@@ -183,6 +199,10 @@ function dismissIncomingCall() {
     modal.style.display = 'none';
   }
   clearTimeout(dismissTimeout);
+  
+  // Stop ringing sound
+  stopAllSounds();
+  
   currentCallData = null;
   onAcceptCallback = null;
   onDeclineCallback = null;

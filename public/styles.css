@@ -828,10 +828,29 @@ body.ar-active .ar-close{ display:block !important; }
 }
 .call-modal-header{
   text-align:center;margin-bottom:20px;
+  position:relative;
 }
 .call-modal-header h3{
   font-size:18px;font-weight:600;
   color:var(--text);margin:0;
+}
+.call-close-btn{
+  position:absolute;top:-8px;right:-8px;
+  width:32px;height:32px;
+  border:none;border-radius:50%;
+  background:rgba(255,255,255,0.1);
+  color:var(--text-light);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s ease;
+}
+.call-close-btn:hover{
+  background:rgba(255,255,255,0.15);
+  color:var(--text);
+  transform:scale(1.1);
+}
+.call-close-btn:active{
+  transform:scale(0.95);
 }
 .call-modal-body{
   text-align:center;padding:12px 0 24px 0;

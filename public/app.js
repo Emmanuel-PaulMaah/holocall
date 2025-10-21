@@ -131,11 +131,16 @@ async function init() {
   startPresenceTracking();
   
   // Initialize push notifications (request permission)
-  initPushNotifications().then(success => {
+  initPushNotifications(true).then(success => {
     if (success) {
-      console.log('Push notifications enabled');
+      showToast('📬 Notifications enabled! You\'ll get call alerts.');
     } else {
-      console.log('Push notifications not available or denied');
+      const permission = Notification?.permission;
+      if (permission === 'denied') {
+        showToast('⚠️ Enable notifications in browser settings to get call alerts', true);
+      } else {
+        console.log('Push notifications not available or denied');
+      }
     }
   });
   

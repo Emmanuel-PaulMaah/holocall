@@ -1,4 +1,6 @@
 import { startPresenceTracking, stopPresenceTracking } from './presence-tracker.js';
+import { subscribeToCallNotifications } from './call-notifications.js';
+import { createIncomingCallModal, showIncomingCall } from './incoming-call-modal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -286,10 +288,45 @@ $('searchBtn').addEventListener('click', () => {
   searchUsers($('searchInput').value);
 });
 
+// Handle incoming call
+function handleIncomingCall(callData) {
+  console.log('Incoming call received on Find People page:', callData);
+  
+  if (!callData || !callData.roomId || !callData.callerName) {
+    console.error('Invalid call data received:', callData);
+    return;
+  }
+  
+  showIncomingCall(callData, {
+    onAccept: (data) => {
+      console.log('Call accepted, navigating to call page:', data.roomId);
+      window.location.href = `/?room=${data.roomId}`;
+    },
+    onDecline: (data) => {
+      console.log('Call declined');
+      showToast('Call declined');
+    }
+  });
+}
+
 (async () => {
   await checkAuth();
   await loadFriendsAndRequests();
   $('searchInput').focus();
+  
+  // Create incoming call modal
+  createIncomingCallModal();
+  
+  // Subscribe to call notifications
+  subscribeToCallNotifications({
+    onIncomingCall: handleIncomingCall,
+    onCallAnswered: () => {
+      showToast('Call connected!');
+    },
+    onCallDeclined: () => {
+      showToast('Call was declined', true);
+    }
+  });
   
   // Start online presence tracking
   startPresenceTracking();
