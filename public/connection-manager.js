@@ -1,7 +1,7 @@
 // Connection Manager - LiveKit connection logic
 
 import { Room, RoomEvent, createLocalTracks, setLogLevel } from 'https://cdn.jsdelivr.net/npm/livekit-client/+esm';
-import { state, showToast, setUIState, recalcHoloVisibility, getVideoConstraints } from './ui-controller.js';
+import { state, showToast, setUIState, recalcHoloVisibility, getVideoConstraints, getVideoEncodingOptions } from './ui-controller.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -91,6 +91,15 @@ export async function switchVideoQuality() {
 
     // Replace the track
     await oldTrack.replaceTrack(newVideoTrack.mediaStreamTrack);
+    
+    // Update encoding settings for the new quality
+    const encodingOptions = getVideoEncodingOptions();
+    try {
+      await videoPublication.setVideoEncoding(encodingOptions);
+    } catch (encErr) {
+      console.warn('Could not update encoding settings:', encErr);
+      // Continue anyway - track is replaced
+    }
     
     // Preserve camera mute state to prevent privacy issue
     if (oldTrack.mediaStreamTrack) {
@@ -183,10 +192,10 @@ function attachRemoteTrack(track, pub) {
 
 /* ---------------- join / leave ---------------- */
 export async function join() {
-  const room = $('room').value.trim();
+  const room = $('roomInput').value.trim();
   if (!room) { 
     showToast('enter a room name'); 
-    $('room')?.focus(); 
+    $('roomInput')?.focus(); 
     return; 
   }
 
@@ -304,10 +313,26 @@ export async function join() {
       }
     }
 
-    // Publish tracks
+    // Publish tracks with quality settings
     try {
       for (const t of local) {
-        await state.room.localParticipant.publishTrack(t);
+        const publishOptions = {};
+        
+        // Add high-quality encoding for video tracks
+        if (t.kind === 'video') {
+          const encodingOptions = getVideoEncodingOptions();
+          
+          // Set video encoding for quality
+          publishOptions.videoEncoding = {
+            maxBitrate: encodingOptions.maxBitrate,
+            maxFramerate: encodingOptions.maxFramerate
+          };
+          
+          // Enable simulcast for adaptive quality (LiveKit auto-generates 3 layers)
+          publishOptions.simulcast = true;
+        }
+        
+        await state.room.localParticipant.publishTrack(t, publishOptions);
       }
     } catch (err) {
       console.error('Failed to publish tracks:', err);

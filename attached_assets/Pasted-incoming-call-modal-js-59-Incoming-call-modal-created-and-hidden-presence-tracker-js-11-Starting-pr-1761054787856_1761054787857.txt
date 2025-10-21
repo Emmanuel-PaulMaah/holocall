@@ -1,0 +1,592 @@
+incoming-call-modal.js:59 Incoming call modal created and hidden
+presence-tracker.js:11 Starting presence tracking...
+push-notifications.js:43 Service Worker registered: ServiceWorkerRegistration
+push-notifications.js:92 Already subscribed to push notifications
+call-notifications.js:73 Subscribed to call notifications on channel: call:d94ad50f-13c7-47af-bcb5-c10703a84f99
+call-notifications.js:70 Channel subscription status: SUBSCRIBED
+call-notifications.js:50 Incoming call received: Object
+app.js:17 handleIncomingCall called with: Object
+incoming-call-modal.js:70 showIncomingCall called with: Object
+call-sounds.js:64 Starting ringing sound...
+call-sounds.js:101 Stopping all call sounds...
+call-sounds.js:14 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+getAudioContext @ call-sounds.js:14
+call-sounds.js:56 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+playTone @ call-sounds.js:56
+call-sounds.js:14 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+getAudioContext @ call-sounds.js:14
+call-sounds.js:56 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+playTone @ call-sounds.js:56
+incoming-call-modal.js:134 Accept button clicked, callData: Object
+call-notifications.js:146 Call answered notification sent
+call-sounds.js:101 Stopping all call sounds...
+incoming-call-modal.js:212 Incoming call modal dismissed
+app.js:31 Call accepted, joining room: proud-jade-galaxy
++esm:sourcemap:7 setStreamState active
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: clear: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+WebGL: INVALID_FRAMEBUFFER_OPERATION: drawElements: Cannot render to a XRWebGLLayer framebuffer outside of an XRSession animation frame callback.
+three.module.js:17479 WebGL: too many errors, no more errors will be reported to the console for this context.
+render @ three.module.js:17479
+ar-controller.js:307 Loading avatar from: https://models.readyplayer.me/68f39a14c8049dcd189c41e5.glb
+ar-controller.js:351 Loading avatar: 6%
+ar-controller.js:351 Loading avatar: 19%
+ar-controller.js:351 Loading avatar: 25%
+ar-controller.js:351 Loading avatar: 32%
+ar-controller.js:351 Loading avatar: 38%
+ar-controller.js:351 Loading avatar: 44%
+ar-controller.js:351 Loading avatar: 57%
+ar-controller.js:351 Loading avatar: 63%
+ar-controller.js:351 Loading avatar: 82%
+ar-controller.js:351 Loading avatar: 95%
+ar-controller.js:351 Loading avatar: 100%
+ar-controller.js:364 === Avatar Model Inspection ===
+ar-controller.js:377 ✓ Found SkinnedMesh: "EyeLeft" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:391 ✓ Found morph targets in "EyeLeft": 2 blend shapes
+ar-controller.js:401   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:377 ✓ Found SkinnedMesh: "EyeRight" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:391 ✓ Found morph targets in "EyeRight": 2 blend shapes
+ar-controller.js:401   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Head" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:391 ✓ Found morph targets in "Wolf3D_Head": 2 blend shapes
+ar-controller.js:401   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Teeth" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:391 ✓ Found morph targets in "Wolf3D_Teeth": 2 blend shapes
+ar-controller.js:401   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Hair" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Glasses" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Top" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Bottom" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Footwear" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:377 ✓ Found SkinnedMesh: "Wolf3D_Body" with 67 bones
+ar-controller.js:382   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:407 
+--- Summary ---
+ar-controller.js:408 Rigged: YES (67 bones)
+ar-controller.js:409 Blend Shapes: YES (4 meshes with morph targets)
+ar-controller.js:412 → Avatar can be animated with skeletal animations
+ar-controller.js:415 → Avatar supports facial expressions and blend shape animations
+ar-controller.js:418 ===============================
+
+ar-controller.js:456 Avatar outline created
+ar-controller.js:347 Avatar loaded successfully
+three.module.js:28795 WebGL: too many errors, no more errors will be reported to the console for this context.
+WebGLRenderer.clear @ three.module.js:28795

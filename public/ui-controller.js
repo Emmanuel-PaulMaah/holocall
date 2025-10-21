@@ -90,12 +90,49 @@ export function getVideoConstraints() {
   const quality = state.videoQuality;
   
   if (quality === 360) {
-    return { facingMode: 'user', width: 640, height: 360, frameRate: 24 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 640, min: 480 },
+      height: { ideal: 360, min: 270 },
+      frameRate: { ideal: 24, min: 15 }
+    };
   } else if (quality === 1080) {
-    return { facingMode: 'user', width: 1920, height: 1080, frameRate: 30 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 1920, min: 1280 },
+      height: { ideal: 1080, min: 720 },
+      frameRate: { ideal: 30, min: 24 }
+    };
   } else {
     // 720p default
-    return { facingMode: 'user', width: 1280, height: 720, frameRate: 30 };
+    return { 
+      facingMode: 'user', 
+      width: { ideal: 1280, min: 640 },
+      height: { ideal: 720, min: 480 },
+      frameRate: { ideal: 30, min: 20 }
+    };
+  }
+}
+
+export function getVideoEncodingOptions() {
+  const quality = state.videoQuality;
+  
+  if (quality === 360) {
+    return {
+      maxBitrate: 600_000,      // 600 kbps for 360p (LiveKit recommended)
+      maxFramerate: 24
+    };
+  } else if (quality === 1080) {
+    return {
+      maxBitrate: 2_000_000,    // 2 Mbps for 1080p (LiveKit recommended)
+      maxFramerate: 30
+    };
+  } else {
+    // 720p default
+    return {
+      maxBitrate: 1_000_000,    // 1 Mbps for 720p (LiveKit recommended)
+      maxFramerate: 30
+    };
   }
 }
 
@@ -119,6 +156,20 @@ export function setUIState({joined = state.joined, micOn = state.micOn, camOn = 
   setDisabled('muteBtn', !joined); 
   setDisabled('camBtn', !joined);
   
+  // Disable/enable navigation links during calls
+  const navLinks = document.querySelectorAll('.main-nav .nav-link');
+  navLinks.forEach(link => {
+    if (joined) {
+      link.classList.add('disabled');
+      link.setAttribute('aria-disabled', 'true');
+      link.addEventListener('click', preventNavigation);
+    } else {
+      link.classList.remove('disabled');
+      link.removeAttribute('aria-disabled');
+      link.removeEventListener('click', preventNavigation);
+    }
+  });
+  
   if (icon.mute) { 
     icon.mute.setAttribute('aria-pressed', String(micOn)); 
     icon.mute.classList.toggle('is-muted', !micOn); 
@@ -127,6 +178,12 @@ export function setUIState({joined = state.joined, micOn = state.micOn, camOn = 
     icon.cam.setAttribute('aria-pressed', String(camOn));  
     icon.cam.classList.toggle('is-camoff', !camOn); 
   }
+}
+
+// Prevent navigation when nav links are disabled
+function preventNavigation(e) {
+  e.preventDefault();
+  showToast('Cannot navigate while in a call');
 }
 
 export function recalcHoloVisibility() { 

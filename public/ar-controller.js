@@ -1,6 +1,7 @@
 // AR Controller - WebXR/AR functionality
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state, showToast, holoBtn, arClose } from './ui-controller.js';
 import { makeVideoTinyVisible } from './connection-manager.js';
 
@@ -10,6 +11,8 @@ let renderer, scene, camera, reticle, videoPlane, videoOutline;
 let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
 let onSelectRef = null;
 let raycaster = null, touchPointer = null;
+let avatarModel = null, avatarOutline = null;
+let gltfLoader = null;
 
 // Touch gesture state
 let touchState = {
@@ -18,7 +21,8 @@ let touchState = {
   initialScale: 1,
   initialDistance: 0,
   dragStart: null,
-  planeStartPos: null
+  planeStartPos: null,
+  targetObject: null // Track which object (videoPlane or avatarModel) is being manipulated
 };
 
 async function isARSupported() {
@@ -106,6 +110,14 @@ export async function startHoloMode() {
     // scene/camera
     scene = new THREE.Scene(); 
     camera = new THREE.PerspectiveCamera();
+    
+    // Add lighting for 3D avatars
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 1, 1);
+    scene.add(directionalLight);
 
     // reticle (for hit-test path)
     const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
@@ -260,7 +272,204 @@ function tryPlaceVideoPlane() {
     
     // Store initial scale for pinch gestures
     touchState.initialScale = videoPlane.scale.x;
+    
+    // Load avatar if available
+    loadRemoteAvatar();
   });
+}
+
+// Load Ready Player Me avatar for remote participant
+async function loadRemoteAvatar() {
+  try {
+    // Get remote participant's avatar URL from their profile
+    const remoteParticipants = Array.from(state.room?.remoteParticipants?.values() || []);
+    if (remoteParticipants.length === 0) {
+      console.log('No remote participant found');
+      return;
+    }
+    
+    const remoteParticipant = remoteParticipants[0];
+    const remoteUserId = remoteParticipant.identity;
+    
+    // Fetch remote user's profile to get avatar URL
+    const response = await fetch(`/api/user/${remoteUserId}/profile`, { credentials: 'include' });
+    if (!response.ok) {
+      console.log('Could not fetch remote user profile');
+      return;
+    }
+    
+    const { profile } = await response.json();
+    if (!profile || !profile.avatar_url) {
+      console.log('Remote user has no avatar URL set');
+      return;
+    }
+    
+    console.log('Loading avatar from:', profile.avatar_url);
+    
+    // Initialize GLTFLoader if needed
+    if (!gltfLoader) {
+      gltfLoader = new GLTFLoader();
+    }
+    
+    // Load the avatar model
+    gltfLoader.load(
+      profile.avatar_url,
+      (gltf) => {
+        avatarModel = gltf.scene;
+        
+        // Inspect model for rigging and blend shapes
+        inspectAvatarModel(gltf);
+        
+        // Scale avatar to reasonable size (RPM avatars are typically human-sized)
+        avatarModel.scale.set(0.5, 0.5, 0.5);
+        
+        // Position avatar upright and fixed to ground level
+        if (videoPlane) {
+          // Use video plane position as horizontal reference only
+          avatarModel.position.x = videoPlane.position.x + 0.5; // 0.5m to the right
+          avatarModel.position.z = videoPlane.position.z;
+          // Fix avatar to ground level (y=0 or slightly above)
+          avatarModel.position.y = 0;
+        } else {
+          // Fallback position if video plane not yet placed
+          avatarModel.position.set(0.5, 0, -1);
+        }
+        
+        // Keep avatar upright - no rotation copying from video plane
+        avatarModel.rotation.set(0, 0, 0);
+        
+        // Create orange bounding box outline for avatar (initially hidden)
+        createAvatarOutline();
+        
+        // Add to scene independently (not parented to video plane)
+        scene.add(avatarModel);
+        
+        console.log('Avatar loaded successfully');
+        showToast('3D Avatar loaded!');
+      },
+      (progress) => {
+        console.log('Loading avatar:', Math.round((progress.loaded / progress.total) * 100) + '%');
+      },
+      (error) => {
+        console.error('Failed to load avatar:', error);
+      }
+    );
+  } catch (err) {
+    console.error('Error loading avatar:', err);
+  }
+}
+
+// Inspect avatar model for rigging and blend shapes
+function inspectAvatarModel(gltf) {
+  console.log('=== Avatar Model Inspection ===');
+  
+  let hasRigging = false;
+  let hasMorphTargets = false;
+  let boneCount = 0;
+  let morphTargetInfo = [];
+  
+  gltf.scene.traverse((child) => {
+    // Check for rigging (SkinnedMesh and bones)
+    if (child.isSkinnedMesh) {
+      hasRigging = true;
+      if (child.skeleton) {
+        boneCount = child.skeleton.bones.length;
+        console.log(`✓ Found SkinnedMesh: "${child.name}" with ${boneCount} bones`);
+        
+        // Log some bone names for reference
+        if (child.skeleton.bones.length > 0) {
+          const sampleBones = child.skeleton.bones.slice(0, 5).map(b => b.name);
+          console.log(`  Sample bones: ${sampleBones.join(', ')}...`);
+        }
+      }
+    }
+    
+    // Check for blend shapes (morph targets)
+    if (child.morphTargetDictionary && child.morphTargetInfluences) {
+      hasMorphTargets = true;
+      const morphCount = Object.keys(child.morphTargetDictionary).length;
+      console.log(`✓ Found morph targets in "${child.name}": ${morphCount} blend shapes`);
+      
+      // Log morph target names
+      const morphNames = Object.keys(child.morphTargetDictionary);
+      morphTargetInfo.push({
+        mesh: child.name,
+        morphTargets: morphNames
+      });
+      
+      if (morphNames.length > 0) {
+        console.log(`  Blend shapes: ${morphNames.slice(0, 10).join(', ')}${morphNames.length > 10 ? '...' : ''}`);
+      }
+    }
+  });
+  
+  // Summary
+  console.log('\n--- Summary ---');
+  console.log(`Rigged: ${hasRigging ? 'YES' : 'NO'} ${hasRigging ? `(${boneCount} bones)` : ''}`);
+  console.log(`Blend Shapes: ${hasMorphTargets ? 'YES' : 'NO'} ${hasMorphTargets ? `(${morphTargetInfo.length} meshes with morph targets)` : ''}`);
+  
+  if (hasRigging) {
+    console.log('→ Avatar can be animated with skeletal animations');
+  }
+  if (hasMorphTargets) {
+    console.log('→ Avatar supports facial expressions and blend shape animations');
+  }
+  
+  console.log('===============================\n');
+  
+  // Store for potential future use
+  avatarModel.userData.hasRigging = hasRigging;
+  avatarModel.userData.hasMorphTargets = hasMorphTargets;
+  avatarModel.userData.boneCount = boneCount;
+  avatarModel.userData.morphTargetInfo = morphTargetInfo;
+}
+
+// Create bounding box outline for avatar
+function createAvatarOutline() {
+  if (!avatarModel || avatarOutline) return;
+  
+  // Calculate bounding box for the avatar at current scale
+  const box = new THREE.Box3().setFromObject(avatarModel);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  
+  // Create unit box geometry (1x1x1), we'll scale it to match avatar bounds
+  const outlineGeom = new THREE.BoxGeometry(1, 1, 1);
+  const edges = new THREE.EdgesGeometry(outlineGeom);
+  const outlineMat = new THREE.LineBasicMaterial({ 
+    color: 0xff8c00, // Orange color
+    linewidth: 3,
+    transparent: true,
+    opacity: 1.0
+  });
+  
+  avatarOutline = new THREE.LineSegments(edges, outlineMat);
+  avatarOutline.visible = false;
+  avatarOutline.renderOrder = 999;
+  
+  // Add to scene
+  scene.add(avatarOutline);
+  
+  console.log('Avatar outline created');
+}
+
+// Update avatar outline to match avatar position, rotation, and scale
+function updateAvatarOutline() {
+  if (!avatarModel || !avatarOutline) return;
+  
+  // Recalculate bounding box with current scale
+  const box = new THREE.Box3().setFromObject(avatarModel);
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+  
+  // Update outline position to center of bounding box
+  avatarOutline.position.copy(center);
+  avatarOutline.rotation.copy(avatarModel.rotation);
+  
+  // Scale the unit box to match current bounding box dimensions
+  avatarOutline.scale.set(size.x, size.y, size.z);
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
@@ -280,8 +489,8 @@ function updateOutline() {
   videoOutline.scale.copy(videoPlane.scale);
 }
 
-function isTouchOnVideoPlane(clientX, clientY) {
-  if (!videoPlane || !raycaster || !renderer || !camera) return false;
+function getTouchedObject(clientX, clientY) {
+  if (!raycaster || !renderer || !camera) return null;
   
   // Convert touch coordinates to normalized device coordinates (-1 to +1)
   const rect = renderer.domElement.getBoundingClientRect();
@@ -294,54 +503,94 @@ function isTouchOnVideoPlane(clientX, clientY) {
   // Update raycaster with camera and pointer position
   raycaster.setFromCamera(touchPointer, xrCam);
   
-  // Check for intersections with video plane
-  const intersects = raycaster.intersectObject(videoPlane, false);
-  return intersects.length > 0;
+  // Check for intersections with both avatar and video plane
+  const objectsToCheck = [];
+  if (avatarModel) objectsToCheck.push(avatarModel);
+  if (videoPlane) objectsToCheck.push(videoPlane);
+  
+  if (objectsToCheck.length === 0) return null;
+  
+  const intersects = raycaster.intersectObjects(objectsToCheck, true); // true = check children
+  
+  if (intersects.length > 0) {
+    // Return the top-level object that was intersected
+    const intersectedObj = intersects[0].object;
+    
+    // Check if it's the avatar or a child of the avatar
+    if (avatarModel && (intersectedObj === avatarModel || avatarModel.children.includes(intersectedObj) || isDescendantOf(intersectedObj, avatarModel))) {
+      return avatarModel;
+    }
+    
+    // Check if it's the video plane
+    if (videoPlane && intersectedObj === videoPlane) {
+      return videoPlane;
+    }
+  }
+  
+  return null;
+}
+
+// Helper to check if an object is a descendant of a parent
+function isDescendantOf(obj, parent) {
+  let current = obj.parent;
+  while (current) {
+    if (current === parent) return true;
+    current = current.parent;
+  }
+  return false;
 }
 
 function handleTouchStart(e) {
-  if (!videoPlane) return;
+  if (!videoPlane && !avatarModel) return;
   
   touchState.touches = Array.from(e.touches);
   
-  // Check if first touch is on the video plane
+  // Check if first touch is on video plane or avatar
   const firstTouch = touchState.touches[0];
-  if (!isTouchOnVideoPlane(firstTouch.clientX, firstTouch.clientY)) {
-    // Touch is not on video plane - allow normal UI interaction
+  const touchedObj = getTouchedObject(firstTouch.clientX, firstTouch.clientY);
+  
+  if (!touchedObj) {
+    // Touch is not on any interactive object - allow normal UI interaction
     return;
   }
   
-  // Touch is on video plane - activate gesture controls
+  // Touch is on an object - activate gesture controls
   e.preventDefault();
   touchState.active = true;
+  touchState.targetObject = touchedObj;
   
   if (touchState.touches.length === 1) {
     // Single finger drag setup
     touchState.dragStart = { x: firstTouch.clientX, y: firstTouch.clientY };
-    touchState.planeStartPos = videoPlane.position.clone();
+    touchState.planeStartPos = touchedObj.position.clone();
   } else if (touchState.touches.length === 2) {
     // Two finger pinch setup
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     touchState.initialDistance = getTouchDistance(t1, t2);
-    touchState.initialScale = videoPlane.scale.x;
+    touchState.initialScale = touchedObj.scale.x;
   }
   
-  // Show orange outline
-  if (videoOutline) {
+  // Show orange outline for touched object
+  if (touchedObj === videoPlane && videoOutline) {
     videoOutline.visible = true;
     updateOutline();
+  } else if (touchedObj === avatarModel && avatarOutline) {
+    avatarOutline.visible = true;
+    updateAvatarOutline();
   }
 }
 
 function handleTouchMove(e) {
-  if (!touchState.active || !videoPlane) return;
+  if (!touchState.active || !touchState.targetObject) return;
   
   e.preventDefault();
   touchState.touches = Array.from(e.touches);
   
+  const targetObj = touchState.targetObject;
+  
   if (touchState.touches.length === 1 && touchState.dragStart) {
-    // Single finger drag - move video plane parallel to camera
+    // Single finger drag - move object parallel to camera
     const touch = touchState.touches[0];
     const deltaX = touch.clientX - touchState.dragStart.x;
     const deltaY = touch.clientY - touchState.dragStart.y;
@@ -352,17 +601,17 @@ function handleTouchMove(e) {
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(xrCam.quaternion);
     
     // Scale factor based on distance from camera (farther = larger movements)
-    const distanceFromCam = videoPlane.position.distanceTo(xrCam.position);
+    const distanceFromCam = targetObj.position.distanceTo(xrCam.position);
     const movementScale = distanceFromCam * 0.001;
     
     const newPos = touchState.planeStartPos.clone();
     newPos.add(right.multiplyScalar(deltaX * movementScale));
     newPos.add(up.multiplyScalar(-deltaY * movementScale));
     
-    videoPlane.position.copy(newPos);
+    targetObj.position.copy(newPos);
     
   } else if (touchState.touches.length === 2 && touchState.initialDistance > 0) {
-    // Two finger pinch - scale video plane
+    // Two finger pinch - scale object
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     const currentDistance = getTouchDistance(t1, t2);
@@ -370,11 +619,21 @@ function handleTouchMove(e) {
     
     // Apply scale with min/max constraints (0.3x to 4x)
     const newScale = Math.max(0.3, Math.min(4.0, touchState.initialScale * scaleChange));
-    videoPlane.scale.set(newScale, newScale, 1);
+    
+    // Avatar uses uniform scale, video plane keeps z=1
+    if (targetObj === avatarModel) {
+      targetObj.scale.set(newScale, newScale, newScale);
+    } else if (targetObj === videoPlane) {
+      targetObj.scale.set(newScale, newScale, 1);
+    }
   }
   
-  // Update outline to match
-  updateOutline();
+  // Update outline to match the manipulated object
+  if (targetObj === videoPlane) {
+    updateOutline();
+  } else if (targetObj === avatarModel) {
+    updateAvatarOutline();
+  }
 }
 
 function handleTouchEnd(e) {
@@ -384,20 +643,24 @@ function handleTouchEnd(e) {
   touchState.touches = Array.from(e.touches);
   
   if (touchState.touches.length === 0) {
-    // All fingers lifted - hide outline
+    // All fingers lifted - hide outlines and clear target
     touchState.active = false;
     touchState.dragStart = null;
     touchState.planeStartPos = null;
     touchState.initialDistance = 0;
+    touchState.targetObject = null;
     
     if (videoOutline) {
       videoOutline.visible = false;
+    }
+    if (avatarOutline) {
+      avatarOutline.visible = false;
     }
   } else if (touchState.touches.length === 1) {
     // Went from two fingers to one - reset drag
     const touch = touchState.touches[0];
     touchState.dragStart = { x: touch.clientX, y: touch.clientY };
-    touchState.planeStartPos = videoPlane ? videoPlane.position.clone() : null;
+    touchState.planeStartPos = touchState.targetObject ? touchState.targetObject.position.clone() : null;
     touchState.initialDistance = 0;
   }
 }
@@ -455,6 +718,49 @@ function cleanupXR() {
     try { xrSession.removeEventListener('select', onSelectRef); } catch {} 
   }
   onSelectRef = null;
+  
+  // Clean up avatar outline
+  if (avatarOutline) {
+    if (avatarOutline.parent) {
+      avatarOutline.parent.remove(avatarOutline);
+    }
+    if (avatarOutline.geometry) avatarOutline.geometry.dispose();
+    if (avatarOutline.material) avatarOutline.material.dispose();
+    avatarOutline = null;
+  }
+  
+  // Clean up avatar model
+  if (avatarModel) {
+    // Remove from parent
+    if (avatarModel.parent) {
+      avatarModel.parent.remove(avatarModel);
+    }
+    
+    // Dispose geometries, materials, and textures
+    avatarModel.traverse((child) => {
+      if (child.geometry) {
+        child.geometry.dispose();
+      }
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach(mat => {
+          // Dispose all textures
+          if (mat.map) mat.map.dispose();
+          if (mat.normalMap) mat.normalMap.dispose();
+          if (mat.roughnessMap) mat.roughnessMap.dispose();
+          if (mat.metalnessMap) mat.metalnessMap.dispose();
+          if (mat.aoMap) mat.aoMap.dispose();
+          if (mat.emissiveMap) mat.emissiveMap.dispose();
+          if (mat.bumpMap) mat.bumpMap.dispose();
+          if (mat.displacementMap) mat.displacementMap.dispose();
+          if (mat.alphaMap) mat.alphaMap.dispose();
+          if (mat.envMap) mat.envMap.dispose();
+          mat.dispose();
+        });
+      }
+    });
+    avatarModel = null;
+  }
 
   if (renderer) { 
     renderer.setAnimationLoop(null); 
@@ -465,6 +771,7 @@ function cleanupXR() {
   renderer = scene = camera = reticle = videoPlane = videoOutline = null;
   xrSession = refSpace = viewerSpace = hitTestSource = null;
   raycaster = touchPointer = null;
+  gltfLoader = null;
 }
 
 // Export setup function for event listeners
