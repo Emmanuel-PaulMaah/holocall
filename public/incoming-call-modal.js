@@ -107,7 +107,7 @@ export function showIncomingCall(callData, callbacks = {}) {
   // Start ringing sound for recipient
   startRingingSound();
   
-  // Auto-dismiss after 30 seconds
+  // Auto-dismiss after 60 seconds
   dismissTimeout = setTimeout(() => {
     // Save callback and data before dismissing (dismiss clears them)
     const callback = onDeclineCallback;
@@ -119,13 +119,13 @@ export function showIncomingCall(callData, callbacks = {}) {
     if (callback && data) {
       callback(data);
     }
-  }, 30000);
+  }, 60000);
   
   // Animate timeout indicator
   const indicator = $('callTimeoutIndicator');
   indicator.style.animation = 'none';
   setTimeout(() => {
-    indicator.style.animation = 'timeout-progress 30s linear';
+    indicator.style.animation = 'timeout-progress 60s linear';
   }, 10);
 }
 
