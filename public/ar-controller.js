@@ -1,6 +1,7 @@
 // AR Controller - WebXR/AR functionality
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/loaders/GLTFLoader.js';
 import { state, showToast, holoBtn, arClose } from './ui-controller.js';
 import { makeVideoTinyVisible } from './connection-manager.js';
 
@@ -10,6 +11,8 @@ let renderer, scene, camera, reticle, videoPlane, videoOutline;
 let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
 let onSelectRef = null;
 let raycaster = null, touchPointer = null;
+let avatarModel = null;
+let gltfLoader = null;
 
 // Touch gesture state
 let touchState = {
@@ -260,7 +263,75 @@ function tryPlaceVideoPlane() {
     
     // Store initial scale for pinch gestures
     touchState.initialScale = videoPlane.scale.x;
+    
+    // Load avatar if available
+    loadRemoteAvatar();
   });
+}
+
+// Load Ready Player Me avatar for remote participant
+async function loadRemoteAvatar() {
+  try {
+    // Get remote participant's avatar URL from their profile
+    const remoteParticipants = Array.from(state.room?.remoteParticipants?.values() || []);
+    if (remoteParticipants.length === 0) {
+      console.log('No remote participant found');
+      return;
+    }
+    
+    const remoteParticipant = remoteParticipants[0];
+    const remoteUserId = remoteParticipant.identity;
+    
+    // Fetch remote user's profile to get avatar URL
+    const response = await fetch(`/api/user/${remoteUserId}/profile`, { credentials: 'include' });
+    if (!response.ok) {
+      console.log('Could not fetch remote user profile');
+      return;
+    }
+    
+    const { profile } = await response.json();
+    if (!profile || !profile.avatar_url) {
+      console.log('Remote user has no avatar URL set');
+      return;
+    }
+    
+    console.log('Loading avatar from:', profile.avatar_url);
+    
+    // Initialize GLTFLoader if needed
+    if (!gltfLoader) {
+      gltfLoader = new GLTFLoader();
+    }
+    
+    // Load the avatar model
+    gltfLoader.load(
+      profile.avatar_url,
+      (gltf) => {
+        avatarModel = gltf.scene;
+        
+        // Scale avatar to reasonable size (RPM avatars are typically human-sized)
+        avatarModel.scale.set(0.5, 0.5, 0.5);
+        
+        // Position avatar behind the video plane (relative to video plane)
+        avatarModel.position.set(0, 0, -0.3); // Slightly behind in local space
+        
+        // Parent avatar to video plane so gestures move them together
+        if (videoPlane) {
+          videoPlane.add(avatarModel);
+        }
+        
+        console.log('Avatar loaded successfully');
+        showToast('3D Avatar loaded!');
+      },
+      (progress) => {
+        console.log('Loading avatar:', Math.round((progress.loaded / progress.total) * 100) + '%');
+      },
+      (error) => {
+        console.error('Failed to load avatar:', error);
+      }
+    );
+  } catch (err) {
+    console.error('Error loading avatar:', err);
+  }
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
@@ -455,6 +526,39 @@ function cleanupXR() {
     try { xrSession.removeEventListener('select', onSelectRef); } catch {} 
   }
   onSelectRef = null;
+  
+  // Clean up avatar model
+  if (avatarModel) {
+    // Remove from parent (videoPlane)
+    if (avatarModel.parent) {
+      avatarModel.parent.remove(avatarModel);
+    }
+    
+    // Dispose geometries, materials, and textures
+    avatarModel.traverse((child) => {
+      if (child.geometry) {
+        child.geometry.dispose();
+      }
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach(mat => {
+          // Dispose all textures
+          if (mat.map) mat.map.dispose();
+          if (mat.normalMap) mat.normalMap.dispose();
+          if (mat.roughnessMap) mat.roughnessMap.dispose();
+          if (mat.metalnessMap) mat.metalnessMap.dispose();
+          if (mat.aoMap) mat.aoMap.dispose();
+          if (mat.emissiveMap) mat.emissiveMap.dispose();
+          if (mat.bumpMap) mat.bumpMap.dispose();
+          if (mat.displacementMap) mat.displacementMap.dispose();
+          if (mat.alphaMap) mat.alphaMap.dispose();
+          if (mat.envMap) mat.envMap.dispose();
+          mat.dispose();
+        });
+      }
+    });
+    avatarModel = null;
+  }
 
   if (renderer) { 
     renderer.setAnimationLoop(null); 
@@ -465,6 +569,7 @@ function cleanupXR() {
   renderer = scene = camera = reticle = videoPlane = videoOutline = null;
   xrSession = refSpace = viewerSpace = hitTestSource = null;
   raycaster = touchPointer = null;
+  gltfLoader = null;
 }
 
 // Export setup function for event listeners

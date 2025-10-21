@@ -302,7 +302,8 @@ app.get('/api/token', requireAuth, async (req, res) => {
     const userName = req.user.user_metadata?.full_name || req.user.email?.split('@')[0] || 'User';
 
     const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
-      identity: `${userName} (${req.user.id.substring(0, 8)})`,
+      identity: req.user.id, // Use actual Supabase user ID as identity
+      name: `${userName} (${req.user.id.substring(0, 8)})`, // Display name
     });
     at.addGrant({
       room,
@@ -343,10 +344,33 @@ app.get('/api/profile', requireAuth, async (req, res) => {
   }
 });
 
+// Get any user's profile by user ID (for avatars in AR mode)
+app.get('/api/user/:userId/profile', requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const supabase = getAuthenticatedSupabaseClient(req.accessToken);
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, avatar_url, profile_picture_url')
+      .eq('id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    
+    res.json({ profile: data || null });
+  } catch (err) {
+    console.error('Get user profile error:', err);
+    res.status(500).json({ error: 'failed_to_get_profile', message: err.message });
+  }
+});
+
 // Create or update profile
 app.post('/api/profile', requireAuth, async (req, res) => {
   try {
-    const { username, bio, tags, profile_picture_url } = req.body;
+    const { username, bio, tags, profile_picture_url, avatar_url } = req.body;
     
     if (!username || username.length < 3 || username.length > 30) {
       return res.status(400).json({ error: 'invalid_username', message: 'Username must be 3-30 characters' });
@@ -364,6 +388,7 @@ app.post('/api/profile', requireAuth, async (req, res) => {
       bio: bio || '',
       tags: tags || [],
       profile_picture_url: profile_picture_url || null,
+      avatar_url: avatar_url || null,
       updated_at: new Date().toISOString()
     };
     

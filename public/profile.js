@@ -87,6 +87,7 @@ async function loadProfile() {
     if (data.profile) {
       $('username').value = data.profile.username || '';
       $('bio').value = data.profile.bio || '';
+      $('avatarUrl').value = data.profile.avatar_url || '';
       
       if (data.profile.tags && Array.isArray(data.profile.tags)) {
         $('tags').value = data.profile.tags.join(', ');
@@ -180,6 +181,7 @@ $('profileForm').addEventListener('submit', async (e) => {
   const username = $('username').value.trim();
   const bio = $('bio').value.trim();
   const tagsInput = $('tags').value.trim();
+  const avatarUrl = $('avatarUrl').value.trim();
   
   if (username.length < 3 || username.length > 30) {
     showError('Username must be 3-30 characters');
@@ -204,7 +206,8 @@ $('profileForm').addEventListener('submit', async (e) => {
       username,
       bio,
       tags,
-      profile_picture_url: uploadedFileUrl
+      profile_picture_url: uploadedFileUrl,
+      avatar_url: avatarUrl || null
     };
     
     const res = await fetch('/api/profile', {
