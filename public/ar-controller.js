@@ -21,7 +21,8 @@ let touchState = {
   initialScale: 1,
   initialDistance: 0,
   dragStart: null,
-  planeStartPos: null
+  planeStartPos: null,
+  targetObject: null // Track which object (videoPlane or avatarModel) is being manipulated
 };
 
 async function isARSupported() {
@@ -366,8 +367,8 @@ function updateOutline() {
   videoOutline.scale.copy(videoPlane.scale);
 }
 
-function isTouchOnVideoPlane(clientX, clientY) {
-  if (!videoPlane || !raycaster || !renderer || !camera) return false;
+function getTouchedObject(clientX, clientY) {
+  if (!raycaster || !renderer || !camera) return null;
   
   // Convert touch coordinates to normalized device coordinates (-1 to +1)
   const rect = renderer.domElement.getBoundingClientRect();
@@ -380,54 +381,91 @@ function isTouchOnVideoPlane(clientX, clientY) {
   // Update raycaster with camera and pointer position
   raycaster.setFromCamera(touchPointer, xrCam);
   
-  // Check for intersections with video plane
-  const intersects = raycaster.intersectObject(videoPlane, false);
-  return intersects.length > 0;
+  // Check for intersections with both avatar and video plane
+  const objectsToCheck = [];
+  if (avatarModel) objectsToCheck.push(avatarModel);
+  if (videoPlane) objectsToCheck.push(videoPlane);
+  
+  if (objectsToCheck.length === 0) return null;
+  
+  const intersects = raycaster.intersectObjects(objectsToCheck, true); // true = check children
+  
+  if (intersects.length > 0) {
+    // Return the top-level object that was intersected
+    const intersectedObj = intersects[0].object;
+    
+    // Check if it's the avatar or a child of the avatar
+    if (avatarModel && (intersectedObj === avatarModel || avatarModel.children.includes(intersectedObj) || isDescendantOf(intersectedObj, avatarModel))) {
+      return avatarModel;
+    }
+    
+    // Check if it's the video plane
+    if (videoPlane && intersectedObj === videoPlane) {
+      return videoPlane;
+    }
+  }
+  
+  return null;
+}
+
+// Helper to check if an object is a descendant of a parent
+function isDescendantOf(obj, parent) {
+  let current = obj.parent;
+  while (current) {
+    if (current === parent) return true;
+    current = current.parent;
+  }
+  return false;
 }
 
 function handleTouchStart(e) {
-  if (!videoPlane) return;
+  if (!videoPlane && !avatarModel) return;
   
   touchState.touches = Array.from(e.touches);
   
-  // Check if first touch is on the video plane
+  // Check if first touch is on video plane or avatar
   const firstTouch = touchState.touches[0];
-  if (!isTouchOnVideoPlane(firstTouch.clientX, firstTouch.clientY)) {
-    // Touch is not on video plane - allow normal UI interaction
+  const touchedObj = getTouchedObject(firstTouch.clientX, firstTouch.clientY);
+  
+  if (!touchedObj) {
+    // Touch is not on any interactive object - allow normal UI interaction
     return;
   }
   
-  // Touch is on video plane - activate gesture controls
+  // Touch is on an object - activate gesture controls
   e.preventDefault();
   touchState.active = true;
+  touchState.targetObject = touchedObj;
   
   if (touchState.touches.length === 1) {
     // Single finger drag setup
     touchState.dragStart = { x: firstTouch.clientX, y: firstTouch.clientY };
-    touchState.planeStartPos = videoPlane.position.clone();
+    touchState.planeStartPos = touchedObj.position.clone();
   } else if (touchState.touches.length === 2) {
     // Two finger pinch setup
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     touchState.initialDistance = getTouchDistance(t1, t2);
-    touchState.initialScale = videoPlane.scale.x;
+    touchState.initialScale = touchedObj.scale.x;
   }
   
-  // Show orange outline
-  if (videoOutline) {
+  // Show orange outline only for video plane
+  if (touchedObj === videoPlane && videoOutline) {
     videoOutline.visible = true;
     updateOutline();
   }
 }
 
 function handleTouchMove(e) {
-  if (!touchState.active || !videoPlane) return;
+  if (!touchState.active || !touchState.targetObject) return;
   
   e.preventDefault();
   touchState.touches = Array.from(e.touches);
   
+  const targetObj = touchState.targetObject;
+  
   if (touchState.touches.length === 1 && touchState.dragStart) {
-    // Single finger drag - move video plane parallel to camera
+    // Single finger drag - move object parallel to camera
     const touch = touchState.touches[0];
     const deltaX = touch.clientX - touchState.dragStart.x;
     const deltaY = touch.clientY - touchState.dragStart.y;
@@ -438,17 +476,17 @@ function handleTouchMove(e) {
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(xrCam.quaternion);
     
     // Scale factor based on distance from camera (farther = larger movements)
-    const distanceFromCam = videoPlane.position.distanceTo(xrCam.position);
+    const distanceFromCam = targetObj.position.distanceTo(xrCam.position);
     const movementScale = distanceFromCam * 0.001;
     
     const newPos = touchState.planeStartPos.clone();
     newPos.add(right.multiplyScalar(deltaX * movementScale));
     newPos.add(up.multiplyScalar(-deltaY * movementScale));
     
-    videoPlane.position.copy(newPos);
+    targetObj.position.copy(newPos);
     
   } else if (touchState.touches.length === 2 && touchState.initialDistance > 0) {
-    // Two finger pinch - scale video plane
+    // Two finger pinch - scale object
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     const currentDistance = getTouchDistance(t1, t2);
@@ -456,11 +494,19 @@ function handleTouchMove(e) {
     
     // Apply scale with min/max constraints (0.3x to 4x)
     const newScale = Math.max(0.3, Math.min(4.0, touchState.initialScale * scaleChange));
-    videoPlane.scale.set(newScale, newScale, 1);
+    
+    // Avatar uses uniform scale, video plane keeps z=1
+    if (targetObj === avatarModel) {
+      targetObj.scale.set(newScale, newScale, newScale);
+    } else if (targetObj === videoPlane) {
+      targetObj.scale.set(newScale, newScale, 1);
+    }
   }
   
-  // Update outline to match
-  updateOutline();
+  // Update outline to match (only for video plane)
+  if (targetObj === videoPlane) {
+    updateOutline();
+  }
 }
 
 function handleTouchEnd(e) {
@@ -470,11 +516,12 @@ function handleTouchEnd(e) {
   touchState.touches = Array.from(e.touches);
   
   if (touchState.touches.length === 0) {
-    // All fingers lifted - hide outline
+    // All fingers lifted - hide outline and clear target
     touchState.active = false;
     touchState.dragStart = null;
     touchState.planeStartPos = null;
     touchState.initialDistance = 0;
+    touchState.targetObject = null;
     
     if (videoOutline) {
       videoOutline.visible = false;
@@ -483,7 +530,7 @@ function handleTouchEnd(e) {
     // Went from two fingers to one - reset drag
     const touch = touchState.touches[0];
     touchState.dragStart = { x: touch.clientX, y: touch.clientY };
-    touchState.planeStartPos = videoPlane ? videoPlane.position.clone() : null;
+    touchState.planeStartPos = touchState.targetObject ? touchState.targetObject.position.clone() : null;
     touchState.initialDistance = 0;
   }
 }
