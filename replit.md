@@ -37,6 +37,7 @@ The application uses an Express server (`server/index.js`) to serve static front
 ## Recent Changes
 ### 2025-10-21
 - **Fixed Call Acceptance Flow:** Changed navigation from non-existent `/call/room-id` to `/?room=room-id` using existing index.html. Both caller and receiver now properly join calls without 404 errors.
-- **Web Push Notifications:** Implemented service worker-based push notifications for cross-page call alerts. Users receive incoming call notifications even when on different pages or app is in background. Features secure JWT-based decline tokens (one-time use, 1-minute expiry) to prevent replay attacks.
-- **Online Presence Tracking:** Fixed presence system to reliably mark users offline when leaving pages using `navigator.sendBeacon` in `stopPresenceTracking()`.
+- **Fixed Call Acceptance Bug:** Resolved critical bug where accepting incoming calls did nothing. The `dismissIncomingCall()` function was nullifying callbacks before they could execute. Now callbacks are saved to local variables before dismissal in all code paths (accept button, decline button, and auto-dismiss timeout).
+- **Web Push Notifications:** Implemented service worker-based push notifications for cross-page call alerts. Users receive incoming call notifications even when on different pages or app is in background. Features secure JWT-based decline tokens (one-time use, 1-minute expiry) to prevent replay attacks. Token replay prevention uses Map-based tracking with per-token expiry timestamps.
+- **Online Presence Tracking:** Expanded presence tracking to all pages (call page, my people, profile, find people). Users now show as online anywhere in the app, not just on the call page. Presence system reliably marks users offline when leaving pages using `navigator.sendBeacon` in `stopPresenceTracking()`.
 - **Database Requirements:** Added `push_subscription` JSONB column requirement to profiles table (see SUPABASE_SETUP.md).
