@@ -11,7 +11,7 @@ let renderer, scene, camera, reticle, videoPlane, videoOutline;
 let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
 let onSelectRef = null;
 let raycaster = null, touchPointer = null;
-let avatarModel = null;
+let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
 
 // Touch gesture state
@@ -317,20 +317,29 @@ async function loadRemoteAvatar() {
       (gltf) => {
         avatarModel = gltf.scene;
         
+        // Inspect model for rigging and blend shapes
+        inspectAvatarModel(gltf);
+        
         // Scale avatar to reasonable size (RPM avatars are typically human-sized)
         avatarModel.scale.set(0.5, 0.5, 0.5);
         
-        // Position avatar independently in the room (separate from video plane)
-        // Place it to the right and slightly forward of where video plane would be
+        // Position avatar upright and fixed to ground level
         if (videoPlane) {
-          // Use video plane position as reference but place avatar separately
-          avatarModel.position.copy(videoPlane.position);
-          avatarModel.position.x += 0.5; // 0.5m to the right
-          avatarModel.rotation.copy(videoPlane.rotation);
+          // Use video plane position as horizontal reference only
+          avatarModel.position.x = videoPlane.position.x + 0.5; // 0.5m to the right
+          avatarModel.position.z = videoPlane.position.z;
+          // Fix avatar to ground level (y=0 or slightly above)
+          avatarModel.position.y = 0;
         } else {
           // Fallback position if video plane not yet placed
           avatarModel.position.set(0.5, 0, -1);
         }
+        
+        // Keep avatar upright - no rotation copying from video plane
+        avatarModel.rotation.set(0, 0, 0);
+        
+        // Create orange bounding box outline for avatar (initially hidden)
+        createAvatarOutline();
         
         // Add to scene independently (not parented to video plane)
         scene.add(avatarModel);
@@ -348,6 +357,122 @@ async function loadRemoteAvatar() {
   } catch (err) {
     console.error('Error loading avatar:', err);
   }
+}
+
+// Inspect avatar model for rigging and blend shapes
+function inspectAvatarModel(gltf) {
+  console.log('=== Avatar Model Inspection ===');
+  
+  let hasRigging = false;
+  let hasMorphTargets = false;
+  let boneCount = 0;
+  let morphTargetInfo = [];
+  
+  gltf.scene.traverse((child) => {
+    // Check for rigging (SkinnedMesh and bones)
+    if (child.isSkinnedMesh) {
+      hasRigging = true;
+      if (child.skeleton) {
+        boneCount = child.skeleton.bones.length;
+        console.log(`✓ Found SkinnedMesh: "${child.name}" with ${boneCount} bones`);
+        
+        // Log some bone names for reference
+        if (child.skeleton.bones.length > 0) {
+          const sampleBones = child.skeleton.bones.slice(0, 5).map(b => b.name);
+          console.log(`  Sample bones: ${sampleBones.join(', ')}...`);
+        }
+      }
+    }
+    
+    // Check for blend shapes (morph targets)
+    if (child.morphTargetDictionary && child.morphTargetInfluences) {
+      hasMorphTargets = true;
+      const morphCount = Object.keys(child.morphTargetDictionary).length;
+      console.log(`✓ Found morph targets in "${child.name}": ${morphCount} blend shapes`);
+      
+      // Log morph target names
+      const morphNames = Object.keys(child.morphTargetDictionary);
+      morphTargetInfo.push({
+        mesh: child.name,
+        morphTargets: morphNames
+      });
+      
+      if (morphNames.length > 0) {
+        console.log(`  Blend shapes: ${morphNames.slice(0, 10).join(', ')}${morphNames.length > 10 ? '...' : ''}`);
+      }
+    }
+  });
+  
+  // Summary
+  console.log('\n--- Summary ---');
+  console.log(`Rigged: ${hasRigging ? 'YES' : 'NO'} ${hasRigging ? `(${boneCount} bones)` : ''}`);
+  console.log(`Blend Shapes: ${hasMorphTargets ? 'YES' : 'NO'} ${hasMorphTargets ? `(${morphTargetInfo.length} meshes with morph targets)` : ''}`);
+  
+  if (hasRigging) {
+    console.log('→ Avatar can be animated with skeletal animations');
+  }
+  if (hasMorphTargets) {
+    console.log('→ Avatar supports facial expressions and blend shape animations');
+  }
+  
+  console.log('===============================\n');
+  
+  // Store for potential future use
+  avatarModel.userData.hasRigging = hasRigging;
+  avatarModel.userData.hasMorphTargets = hasMorphTargets;
+  avatarModel.userData.boneCount = boneCount;
+  avatarModel.userData.morphTargetInfo = morphTargetInfo;
+}
+
+// Create bounding box outline for avatar
+function createAvatarOutline() {
+  if (!avatarModel || avatarOutline) return;
+  
+  // Calculate bounding box for the avatar at current scale
+  const box = new THREE.Box3().setFromObject(avatarModel);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  
+  // Create unit box geometry (1x1x1), we'll scale it to match avatar bounds
+  const outlineGeom = new THREE.BoxGeometry(1, 1, 1);
+  const edges = new THREE.EdgesGeometry(outlineGeom);
+  const outlineMat = new THREE.LineBasicMaterial({ 
+    color: 0xff8c00, // Orange color
+    linewidth: 3,
+    transparent: true,
+    opacity: 1.0
+  });
+  
+  avatarOutline = new THREE.LineSegments(edges, outlineMat);
+  avatarOutline.visible = false;
+  avatarOutline.renderOrder = 999;
+  
+  // Add to scene
+  scene.add(avatarOutline);
+  
+  // Set initial position and scale
+  updateAvatarOutline();
+  
+  console.log('Avatar outline created');
+}
+
+// Update avatar outline to match avatar position, rotation, and scale
+function updateAvatarOutline() {
+  if (!avatarModel || !avatarOutline) return;
+  
+  // Recalculate bounding box with current scale
+  const box = new THREE.Box3().setFromObject(avatarModel);
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+  
+  // Update outline position to center of bounding box
+  avatarOutline.position.copy(center);
+  avatarOutline.rotation.copy(avatarModel.rotation);
+  
+  // Scale the unit box to match current bounding box dimensions
+  avatarOutline.scale.set(size.x, size.y, size.z);
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
@@ -449,10 +574,13 @@ function handleTouchStart(e) {
     touchState.initialScale = touchedObj.scale.x;
   }
   
-  // Show orange outline only for video plane
+  // Show orange outline for touched object
   if (touchedObj === videoPlane && videoOutline) {
     videoOutline.visible = true;
     updateOutline();
+  } else if (touchedObj === avatarModel && avatarOutline) {
+    avatarOutline.visible = true;
+    updateAvatarOutline();
   }
 }
 
@@ -503,9 +631,11 @@ function handleTouchMove(e) {
     }
   }
   
-  // Update outline to match (only for video plane)
+  // Update outline to match the manipulated object
   if (targetObj === videoPlane) {
     updateOutline();
+  } else if (targetObj === avatarModel) {
+    updateAvatarOutline();
   }
 }
 
@@ -516,7 +646,7 @@ function handleTouchEnd(e) {
   touchState.touches = Array.from(e.touches);
   
   if (touchState.touches.length === 0) {
-    // All fingers lifted - hide outline and clear target
+    // All fingers lifted - hide outlines and clear target
     touchState.active = false;
     touchState.dragStart = null;
     touchState.planeStartPos = null;
@@ -525,6 +655,9 @@ function handleTouchEnd(e) {
     
     if (videoOutline) {
       videoOutline.visible = false;
+    }
+    if (avatarOutline) {
+      avatarOutline.visible = false;
     }
   } else if (touchState.touches.length === 1) {
     // Went from two fingers to one - reset drag
@@ -589,9 +722,19 @@ function cleanupXR() {
   }
   onSelectRef = null;
   
+  // Clean up avatar outline
+  if (avatarOutline) {
+    if (avatarOutline.parent) {
+      avatarOutline.parent.remove(avatarOutline);
+    }
+    if (avatarOutline.geometry) avatarOutline.geometry.dispose();
+    if (avatarOutline.material) avatarOutline.material.dispose();
+    avatarOutline = null;
+  }
+  
   // Clean up avatar model
   if (avatarModel) {
-    // Remove from parent (videoPlane)
+    // Remove from parent
     if (avatarModel.parent) {
       avatarModel.parent.remove(avatarModel);
     }
