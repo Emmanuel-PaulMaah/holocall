@@ -36,6 +36,9 @@ The application uses an Express server (`server/index.js`) to serve static front
 -   **Ready Player Me:** 3D avatar platform providing customizable GLB avatars that appear in AR Holo Mode during calls.
 
 ## Recent Changes
+### 2025-10-23
+- **AR Device Compatibility Improvements:** Fixed black screen issue on Samsung A23 and other devices where WebXR hit-testing may not work reliably. Implemented automatic video plane placement fallback: waits 2 seconds after AR session starts, then retries placement every 500ms until video stream is ready and placement succeeds. System uses hit-test surface detection when available (shows "Video placed via surface detection" toast), otherwise falls back to camera-relative placement at 1.5m distance (shows "Video placed in front of camera" toast). Added comprehensive diagnostic logging to track XR session initialization, hit-test status, and placement attempts. Implemented robust crash prevention with session-state guards in all async callbacks to prevent null dereferences if user exits AR before placement completes. Auto-placement system properly cleans up timers and intervals during session teardown.
+
 ### 2025-10-21
 - **Fixed Call Acceptance Flow:** Changed navigation from non-existent `/call/room-id` to `/?room=room-id` using existing index.html. Both caller and receiver now properly join calls without 404 errors.
 - **Fixed Call Acceptance Bug:** Resolved critical bug where accepting incoming calls did nothing. The `dismissIncomingCall()` function was nullifying callbacks before they could execute. Now callbacks are saved to local variables before dismissal in all code paths (accept button, decline button, and auto-dismiss timeout).

@@ -13,6 +13,8 @@ let onSelectRef = null;
 let raycaster = null, touchPointer = null;
 let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
+let autoPlacementDelay = null;
+let autoPlacementTimer = null;
 
 // Touch gesture state
 let touchState = {
@@ -162,11 +164,50 @@ export async function startHoloMode() {
 
     const labelRS = viewerTry.type || got.type || 'unknown';
     const labelHT = hitTestSource ? 'on' : 'off';
+    console.log(`[AR] Session started - ref=${labelRS}, hitTest=${labelHT}`);
     showToast(`AR ready · ref=${labelRS} · hitTest=${labelHT}`);
 
     // place plane on XR select (works cross-device)
     onSelectRef = () => tryPlaceVideoPlane();
     xrSession.addEventListener('select', onSelectRef);
+
+    // Start automatic placement fallback - initial delay 2s, then retry every 500ms
+    console.log('[AR] Starting auto-placement timer (2s initial delay, 500ms retry)');
+    autoPlacementDelay = setTimeout(() => {
+      autoPlacementDelay = null;
+      
+      // Guard: verify session is still active
+      if (!xrSession || !renderer || !scene) {
+        console.log('[AR] Auto-placement cancelled - session ended before delay');
+        return;
+      }
+      
+      // After initial delay, start retry loop
+      autoPlacementTimer = setInterval(() => {
+        // Guard: verify session is still active
+        if (!xrSession || !renderer || !scene) {
+          console.log('[AR] Auto-placement cancelled - session ended');
+          clearInterval(autoPlacementTimer);
+          autoPlacementTimer = null;
+          return;
+        }
+        
+        if (!videoPlane && !placementInProgress) {
+          console.log('[AR] Auto-placement attempt - checking video stream');
+          tryPlaceVideoPlane();
+        } else if (videoPlane) {
+          console.log('[AR] Auto-placement complete - video placed');
+          clearInterval(autoPlacementTimer);
+          autoPlacementTimer = null;
+        }
+      }, 500);
+      
+      // Trigger first attempt immediately after delay
+      if (!videoPlane && !placementInProgress) {
+        console.log('[AR] Auto-placement initial attempt');
+        tryPlaceVideoPlane();
+      }
+    }, 2000);
 
     xrSession.addEventListener('end', () => { cleanupXR(); });
     renderer.setAnimationLoop(renderXR);
@@ -176,6 +217,8 @@ export async function startHoloMode() {
   }
 }
 
+let hitTestLogCounter = 0;
+let lastHitSuccess = false;
 function renderXR(_t, frame) {
   if (!frame) { 
     renderer?.render(scene, camera); 
@@ -188,10 +231,23 @@ function renderXR(_t, frame) {
       const pose = hits[0].getPose(refSpace);
       if (pose) { 
         reticle.visible = true; 
-        reticle.matrix.fromArray(pose.transform.matrix); 
+        reticle.matrix.fromArray(pose.transform.matrix);
+        
+        // Log first hit-test success for diagnostics
+        if (!lastHitSuccess) {
+          console.log('[AR] Hit-test success - surface detected');
+          lastHitSuccess = true;
+        }
       }
     } else { 
-      reticle.visible = false; 
+      reticle.visible = false;
+      
+      // Log hit-test failures periodically (every 60 frames = ~1 second)
+      if (hitTestLogCounter % 60 === 0 && hitTestLogCounter < 300) {
+        console.log('[AR] Hit-test: no surface found (frame ' + hitTestLogCounter + ')');
+      }
+      hitTestLogCounter++;
+      lastHitSuccess = false;
     }
   }
 
@@ -203,12 +259,27 @@ function renderXR(_t, frame) {
   renderer.render(scene, camera);
 }
 
+let placementInProgress = false;
+
 function tryPlaceVideoPlane() {
-  if (videoPlane) return;
+  if (videoPlane) {
+    console.log('[AR] Video plane already placed, skipping');
+    return;
+  }
+
+  if (placementInProgress) {
+    console.log('[AR] Placement already in progress, skipping duplicate attempt');
+    return;
+  }
+
+  console.log('[AR] tryPlaceVideoPlane called');
+  placementInProgress = true;
 
   const remoteVid = $('remoteHoloVideo');
   if (!remoteVid.srcObject) {
-    showToast('remote video not ready');
+    console.log('[AR] Remote video not ready, will retry when stream appears');
+    placementInProgress = false;
+    // Don't clear timer - let it retry later when stream might be ready
     return;
   }
 
@@ -228,6 +299,19 @@ function tryPlaceVideoPlane() {
   };
 
   ensureReady().then(() => {
+    // Guard: verify session is still active before placing
+    if (!xrSession || !renderer || !scene || videoPlane) {
+      console.log('[AR] Placement cancelled - session ended or video already placed');
+      placementInProgress = false;
+      return;
+    }
+    
+    // Clear auto-placement interval now that placement is actually happening
+    if (autoPlacementTimer) {
+      clearInterval(autoPlacementTimer);
+      autoPlacementTimer = null;
+      console.log('[AR] Auto-placement interval cleared - video placement successful');
+    }
     const geom = new THREE.PlaneGeometry(1.5, 1.0);
     const texture = createVideoTextureWithUpdates(remoteVid);
     const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
@@ -246,18 +330,22 @@ function tryPlaceVideoPlane() {
     videoOutline.renderOrder = 999;
 
     if (hitTestSource && reticle?.visible) {
+      console.log('[AR] Using hit-test placement (reticle visible)');
       const m = new THREE.Matrix4(); 
       m.copy(reticle.matrix);
       videoPlane.position.setFromMatrixPosition(m);
       videoPlane.quaternion.setFromRotationMatrix(m);
+      showToast('Video placed via surface detection');
     } else {
-      // fallback: 2m in front of XR camera
+      console.log('[AR] Using fallback placement (camera-relative, 1.5m ahead)');
+      // fallback: 1.5m in front of XR camera
       const xrCam = renderer.xr.getCamera(camera);
       const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
       const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion).normalize();
-      const pos = camPos.clone().add(forward.multiplyScalar(2.0));
+      const pos = camPos.clone().add(forward.multiplyScalar(1.5));
       videoPlane.position.copy(pos);
       videoPlane.lookAt(camPos);
+      showToast('Video placed in front of camera');
     }
 
     scene.add(videoPlane);
@@ -275,6 +363,13 @@ function tryPlaceVideoPlane() {
     
     // Load avatar if available
     loadRemoteAvatar();
+    
+    // Reset placement flag
+    placementInProgress = false;
+  }).catch((err) => {
+    console.error('[AR] Video placement failed:', err);
+    placementInProgress = false;
+    // Don't clear timer - allow retry
   });
 }
 
@@ -701,6 +796,25 @@ export async function endHoloMode() {
 }
 
 function cleanupXR() {
+  // Clear auto-placement delay timeout if active
+  if (autoPlacementDelay) {
+    clearTimeout(autoPlacementDelay);
+    autoPlacementDelay = null;
+    console.log('[AR] Auto-placement delay timeout cleared during cleanup');
+  }
+  
+  // Clear auto-placement interval if active
+  if (autoPlacementTimer) {
+    clearInterval(autoPlacementTimer);
+    autoPlacementTimer = null;
+    console.log('[AR] Auto-placement interval cleared during cleanup');
+  }
+  
+  // Reset hit-test logging state
+  hitTestLogCounter = 0;
+  lastHitSuccess = false;
+  placementInProgress = false;
+  
   // Detach touch handlers before cleanup
   detachTouchHandlers();
   
