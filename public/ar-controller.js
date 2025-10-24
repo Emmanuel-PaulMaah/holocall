@@ -610,41 +610,59 @@ async function loadIdleAnimation() {
     return;
   }
   
-  // For Ready Player Me avatars, we'll use a Mixamo idle animation
-  // Using a CDN-hosted FBX converted to GLB for RPM compatibility
-  const idleAnimationURL = 'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Breathing_Idle.glb';
+  // Use a reliable Mixamo idle animation
+  // Alternative URLs if primary fails
+  const animationURLs = [
+    'https://models.readyplayer.me/animations/idle.glb',
+    'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Breathing_Idle.glb'
+  ];
   
-  try {
-    console.log('[AR] Loading idle animation from:', idleAnimationURL);
+  let currentURLIndex = 0;
+  
+  const tryLoadAnimation = () => {
+    if (currentURLIndex >= animationURLs.length) {
+      console.error('[AR] All idle animation URLs failed');
+      return;
+    }
+    
+    const url = animationURLs[currentURLIndex];
+    console.log('[AR] Loading idle animation from:', url);
     
     const loader = new GLTFLoader();
     loader.load(
-      idleAnimationURL,
+      url,
       (gltf) => {
         if (gltf.animations && gltf.animations.length > 0) {
           const idleClip = gltf.animations[0];
           idleAction = animationMixer.clipAction(idleClip);
           idleAction.setLoop(THREE.LoopRepeat);
           idleAction.clampWhenFinished = false;
+          idleAction.weight = 1.0;
           idleAction.play();
           
-          console.log('[AR] Idle animation loaded and playing:', idleClip.name, `(${idleClip.duration.toFixed(2)}s)`);
+          console.log('[AR] ✓ Idle animation loaded and playing:', idleClip.name, `(${idleClip.duration.toFixed(2)}s)`);
           showToast('✨ Idle animation active');
         } else {
-          console.warn('[AR] No animations found in idle animation file');
+          console.warn('[AR] No animations in file, trying next URL...');
+          currentURLIndex++;
+          tryLoadAnimation();
         }
       },
       (progress) => {
-        console.log('[AR] Loading idle animation:', Math.round((progress.loaded / progress.total) * 100) + '%');
+        const percent = Math.round((progress.loaded / progress.total) * 100);
+        if (percent % 25 === 0) {
+          console.log('[AR] Loading idle animation:', percent + '%');
+        }
       },
       (error) => {
-        console.error('[AR] Failed to load idle animation:', error);
-        console.log('[AR] Avatar will remain static');
+        console.warn('[AR] Failed to load from', url, '- trying next URL...', error.message);
+        currentURLIndex++;
+        tryLoadAnimation();
       }
     );
-  } catch (err) {
-    console.error('[AR] Error loading idle animation:', err);
-  }
+  };
+  
+  tryLoadAnimation();
 }
 
 // Load speaking/gesturing animation for avatar
@@ -654,39 +672,52 @@ async function loadSpeakingAnimation() {
     return;
   }
   
-  // Using Mixamo talking animation compatible with RPM avatars
-  const speakingAnimationURL = 'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Male_Talking.glb';
+  // Use reliable Mixamo talking animations
+  const animationURLs = [
+    'https://models.readyplayer.me/animations/male-talking.glb',
+    'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Male_Talking.glb'
+  ];
   
-  try {
-    console.log('[AR] Loading speaking animation from:', speakingAnimationURL);
+  let currentURLIndex = 0;
+  
+  const tryLoadAnimation = () => {
+    if (currentURLIndex >= animationURLs.length) {
+      console.warn('[AR] All speaking animation URLs failed - using idle only');
+      return;
+    }
+    
+    const url = animationURLs[currentURLIndex];
+    console.log('[AR] Loading speaking animation from:', url);
     
     const loader = new GLTFLoader();
     loader.load(
-      speakingAnimationURL,
+      url,
       (gltf) => {
         if (gltf.animations && gltf.animations.length > 0) {
           const speakingClip = gltf.animations[0];
           speakingAction = animationMixer.clipAction(speakingClip);
           speakingAction.setLoop(THREE.LoopRepeat);
           speakingAction.clampWhenFinished = false;
+          speakingAction.weight = 1.0;
           // Don't play yet - only when speaking detected
           
-          console.log('[AR] Speaking animation loaded:', speakingClip.name, `(${speakingClip.duration.toFixed(2)}s)`);
+          console.log('[AR] ✓ Speaking animation loaded:', speakingClip.name, `(${speakingClip.duration.toFixed(2)}s)`);
         } else {
-          console.warn('[AR] No animations found in speaking animation file');
+          console.warn('[AR] No animations in file, trying next URL...');
+          currentURLIndex++;
+          tryLoadAnimation();
         }
       },
-      (progress) => {
-        console.log('[AR] Loading speaking animation:', Math.round((progress.loaded / progress.total) * 100) + '%');
-      },
+      undefined,
       (error) => {
-        console.error('[AR] Failed to load speaking animation:', error);
-        console.log('[AR] Avatar will use idle animation only');
+        console.warn('[AR] Failed to load from', url, '- trying next URL...', error.message);
+        currentURLIndex++;
+        tryLoadAnimation();
       }
     );
-  } catch (err) {
-    console.error('[AR] Error loading speaking animation:', err);
-  }
+  };
+  
+  tryLoadAnimation();
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
@@ -742,6 +773,22 @@ function handleTouchStart(e) {
   
   touchState.touches = Array.from(e.touches);
   
+  // If already active and adding fingers, handle transition in touchmove
+  if (touchState.active) {
+    e.preventDefault();
+    
+    // Adding a second finger - setup for pinch
+    if (touchState.touches.length === 2) {
+      const t1 = touchState.touches[0];
+      const t2 = touchState.touches[1];
+      touchState.dragStart = null;
+      touchState.avatarStartPos = null;
+      touchState.initialDistance = getTouchDistance(t1, t2);
+      touchState.initialScale = avatarModel.scale.x;
+    }
+    return;
+  }
+  
   // Check if first touch is on avatar
   const firstTouch = touchState.touches[0];
   const touchedObj = getTouchedObject(firstTouch.clientX, firstTouch.clientY);
@@ -759,10 +806,14 @@ function handleTouchStart(e) {
     // Single finger drag setup
     touchState.dragStart = { x: firstTouch.clientX, y: firstTouch.clientY };
     touchState.avatarStartPos = avatarModel.position.clone();
+    touchState.initialDistance = 0;
+    touchState.initialScale = 0;
   } else if (touchState.touches.length === 2) {
     // Two finger pinch setup
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
+    touchState.dragStart = null;
+    touchState.avatarStartPos = null;
     touchState.initialDistance = getTouchDistance(t1, t2);
     touchState.initialScale = avatarModel.scale.x;
   }
@@ -826,21 +877,31 @@ function handleTouchEnd(e) {
   touchState.touches = Array.from(e.touches);
   
   if (touchState.touches.length === 0) {
-    // All fingers lifted - hide outline
+    // All fingers lifted - completely reset state for next gesture
     touchState.active = false;
     touchState.dragStart = null;
     touchState.avatarStartPos = null;
     touchState.initialDistance = 0;
+    touchState.initialScale = 0; // Reset scale for next pinch
     
     if (avatarOutline) {
       avatarOutline.visible = false;
     }
   } else if (touchState.touches.length === 1) {
-    // Went from two fingers to one - reset drag
+    // Went from two fingers to one - reset for single-finger drag
     const touch = touchState.touches[0];
     touchState.dragStart = { x: touch.clientX, y: touch.clientY };
     touchState.avatarStartPos = avatarModel ? avatarModel.position.clone() : null;
     touchState.initialDistance = 0;
+    touchState.initialScale = 0; // Clear scale state
+  } else if (touchState.touches.length === 2) {
+    // Went from one finger to two - reset for two-finger pinch
+    const t1 = touchState.touches[0];
+    const t2 = touchState.touches[1];
+    touchState.dragStart = null;
+    touchState.avatarStartPos = null;
+    touchState.initialDistance = getTouchDistance(t1, t2);
+    touchState.initialScale = avatarModel ? avatarModel.scale.x : 1;
   }
 }
 
