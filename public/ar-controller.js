@@ -158,18 +158,19 @@ export async function startHoloMode() {
       console.log('[AR] Hit-test enabled - tap to place avatar on surfaces');
       showToast('👆 Tap on a surface to place avatar');
       
-      // Create placement reticle (visual indicator)
-      const geometry = new THREE.RingGeometry(0.1, 0.12, 32);
+      // Create placement reticle (visual indicator) - ORANGE
+      const geometry = new THREE.RingGeometry(0.15, 0.18, 32); // Slightly larger for visibility
       const material = new THREE.MeshBasicMaterial({ 
-        color: 0x00ff00, 
+        color: 0xff8c00, // Orange
         side: THREE.DoubleSide,
-        opacity: 0.7,
+        opacity: 0.9,
         transparent: true
       });
       reticle = new THREE.Mesh(geometry, material);
       reticle.rotation.x = -Math.PI / 2; // Lay flat
       reticle.visible = false;
       scene.add(reticle);
+      console.log('[AR] ✓ ORANGE reticle created (tap to place avatar)');
     } catch(e) {
       console.warn('[AR] Hit-test not available, using fallback placement:', e);
       showToast('🎭 Avatar Mode - Audio Only');
@@ -249,8 +250,16 @@ function renderXR(_t, frame) {
           pose.transform.position.z
         );
         reticle.updateMatrixWorld(true);
+        
+        // Log once per second to avoid spam
+        if (frameRenderCount % 60 === 0) {
+          console.log('[AR] 🎯 Reticle tracking surface at y=' + pose.transform.position.y.toFixed(3));
+        }
       }
     } else {
+      if (reticle.visible) {
+        console.log('[AR] ⚠️ Lost surface tracking');
+      }
       reticle.visible = false;
     }
   }
@@ -267,19 +276,50 @@ function renderXR(_t, frame) {
 
 // Handle tap to place avatar on surface
 function onSelectPlaceAvatar(event) {
-  if (!avatarModel || avatarPlaced) return;
+  console.log('[AR] 🔵 TAP DETECTED - Attempting to place avatar...');
+  console.log('[AR] - avatarModel exists:', !!avatarModel);
+  console.log('[AR] - avatarPlaced:', avatarPlaced);
+  console.log('[AR] - reticle exists:', !!reticle);
+  console.log('[AR] - reticle visible:', reticle?.visible);
+  
+  if (!avatarModel) {
+    console.log('[AR] ❌ No avatar model loaded yet');
+    return;
+  }
+  
+  if (avatarPlaced) {
+    console.log('[AR] ⚠️ Avatar already placed');
+    return;
+  }
   
   // Place avatar at reticle position
   if (reticle && reticle.visible) {
+    const x = reticle.position.x;
+    const y = reticle.position.y;
+    const z = reticle.position.z;
+    
     avatarModel.position.copy(reticle.position);
+    console.log('[AR] 📍 Avatar position set to:', { x: x.toFixed(3), y: y.toFixed(3), z: z.toFixed(3) });
+    
     scene.add(avatarModel);
+    console.log('[AR] ✓ Avatar added to scene');
     
     // Hide reticle and mark as placed
     reticle.visible = false;
     avatarPlaced = true;
     
-    console.log('[AR] Avatar placed at:', avatarModel.position);
+    console.log('[AR] ✅ AVATAR PLACED SUCCESSFULLY!');
+    console.log('[AR] - Scale:', avatarModel.scale.x.toFixed(2) + 'x (FULL HUMAN HEIGHT)');
+    console.log('[AR] - Position:', { 
+      x: avatarModel.position.x.toFixed(2), 
+      y: avatarModel.position.y.toFixed(2), 
+      z: avatarModel.position.z.toFixed(2) 
+    });
+    
     showToast('✓ Avatar placed! Pinch to resize, drag to move');
+  } else {
+    console.log('[AR] ⚠️ Reticle not visible - point at a surface first');
+    showToast('Point at a surface to place avatar');
   }
 }
 
@@ -326,8 +366,10 @@ async function loadRemoteAvatar() {
         // Inspect model for rigging and blend shapes
         inspectAvatarModel(gltf);
         
-        // Scale avatar to reasonable size (RPM avatars are typically human-sized)
-        avatarModel.scale.set(0.5, 0.5, 0.5);
+        // Scale avatar to FULL HUMAN HEIGHT (~1.7m tall)
+        // RPM avatars are already human-sized, so scale to 1.0 for realistic height
+        avatarModel.scale.set(1.0, 1.0, 1.0);
+        console.log('[AR] ✓ Avatar scaled to FULL human height (1.0x scale)');
         
         // Keep avatar upright - standing naturally
         avatarModel.rotation.set(0, 0, 0);
@@ -621,42 +663,51 @@ async function loadIdleAnimation() {
   
   const tryLoadAnimation = () => {
     if (currentURLIndex >= animationURLs.length) {
-      console.error('[AR] All idle animation URLs failed');
+      console.error('[AR] ❌ ALL IDLE ANIMATION URLs FAILED - Avatar will be static');
+      showToast('⚠️ Animation loading failed');
       return;
     }
     
     const url = animationURLs[currentURLIndex];
-    console.log('[AR] Loading idle animation from:', url);
+    console.log('[AR] 🎬 Loading idle animation from URL #' + (currentURLIndex + 1) + ':', url);
     
     const loader = new GLTFLoader();
     loader.load(
       url,
       (gltf) => {
+        console.log('[AR] ✓ Idle animation file loaded, checking for animations...');
+        console.log('[AR] - Animations found:', gltf.animations?.length || 0);
+        
         if (gltf.animations && gltf.animations.length > 0) {
           const idleClip = gltf.animations[0];
+          console.log('[AR] - Animation name:', idleClip.name || 'Unnamed');
+          console.log('[AR] - Animation duration:', idleClip.duration.toFixed(2) + 's');
+          
           idleAction = animationMixer.clipAction(idleClip);
           idleAction.setLoop(THREE.LoopRepeat);
           idleAction.clampWhenFinished = false;
           idleAction.weight = 1.0;
           idleAction.play();
           
-          console.log('[AR] ✓ Idle animation loaded and playing:', idleClip.name, `(${idleClip.duration.toFixed(2)}s)`);
+          console.log('[AR] ✅ IDLE ANIMATION PLAYING!');
           showToast('✨ Idle animation active');
         } else {
-          console.warn('[AR] No animations in file, trying next URL...');
+          console.warn('[AR] ⚠️ No animations in file, trying next URL...');
           currentURLIndex++;
           tryLoadAnimation();
         }
       },
       (progress) => {
         const percent = Math.round((progress.loaded / progress.total) * 100);
-        if (percent % 25 === 0) {
-          console.log('[AR] Loading idle animation:', percent + '%');
+        if (percent === 50 || percent === 100) {
+          console.log('[AR] 📥 Idle animation loading:', percent + '%');
         }
       },
       (error) => {
-        console.warn('[AR] Failed to load from', url, '- trying next URL...', error.message);
+        console.error('[AR] ❌ Failed to load from URL #' + (currentURLIndex + 1));
+        console.error('[AR] Error:', error.message || error);
         currentURLIndex++;
+        console.log('[AR] Trying next URL...');
         tryLoadAnimation();
       }
     );
@@ -682,36 +733,44 @@ async function loadSpeakingAnimation() {
   
   const tryLoadAnimation = () => {
     if (currentURLIndex >= animationURLs.length) {
-      console.warn('[AR] All speaking animation URLs failed - using idle only');
+      console.warn('[AR] ⚠️ All speaking animation URLs failed - using idle only');
       return;
     }
     
     const url = animationURLs[currentURLIndex];
-    console.log('[AR] Loading speaking animation from:', url);
+    console.log('[AR] 🎬 Loading speaking animation from URL #' + (currentURLIndex + 1) + ':', url);
     
     const loader = new GLTFLoader();
     loader.load(
       url,
       (gltf) => {
+        console.log('[AR] ✓ Speaking animation file loaded, checking for animations...');
+        console.log('[AR] - Animations found:', gltf.animations?.length || 0);
+        
         if (gltf.animations && gltf.animations.length > 0) {
           const speakingClip = gltf.animations[0];
+          console.log('[AR] - Animation name:', speakingClip.name || 'Unnamed');
+          console.log('[AR] - Animation duration:', speakingClip.duration.toFixed(2) + 's');
+          
           speakingAction = animationMixer.clipAction(speakingClip);
           speakingAction.setLoop(THREE.LoopRepeat);
           speakingAction.clampWhenFinished = false;
           speakingAction.weight = 1.0;
           // Don't play yet - only when speaking detected
           
-          console.log('[AR] ✓ Speaking animation loaded:', speakingClip.name, `(${speakingClip.duration.toFixed(2)}s)`);
+          console.log('[AR] ✅ SPEAKING ANIMATION LOADED (will play when audio detected)');
         } else {
-          console.warn('[AR] No animations in file, trying next URL...');
+          console.warn('[AR] ⚠️ No animations in file, trying next URL...');
           currentURLIndex++;
           tryLoadAnimation();
         }
       },
       undefined,
       (error) => {
-        console.warn('[AR] Failed to load from', url, '- trying next URL...', error.message);
+        console.error('[AR] ❌ Failed to load from URL #' + (currentURLIndex + 1));
+        console.error('[AR] Error:', error.message || error);
         currentURLIndex++;
+        console.log('[AR] Trying next URL...');
         tryLoadAnimation();
       }
     );
