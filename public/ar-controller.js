@@ -8,12 +8,19 @@ import { toggleCam, setOnCameraToggleCallback } from './connection-manager.js';
 const $ = (id) => document.getElementById(id);
 
 let renderer, scene, camera;
-let xrSession = null, refSpace = null;
+let xrSession = null, refSpace = null, viewerSpace = null;
 let raycaster = null, touchPointer = null;
 let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
 let arToggledCameraOff = false; // Track if AR entry disabled camera
 let frameRenderCount = 0; // Track if frames are actually rendering
+let hitTestSource = null; // Hit-test source for surface placement
+let reticle = null; // Visual indicator for placement
+let avatarPlaced = false; // Track if avatar has been placed
+let animationMixer = null; // Three.js AnimationMixer for avatar animations
+let idleAction = null; // Idle/breathing animation
+let speakingAction = null; // Speaking/gesturing animation
+let clock = null; // Clock for animation updates
 
 // Touch gesture state (avatar only)
 let touchState = {
@@ -70,16 +77,27 @@ export async function startHoloMode() {
   }
 
   try {
-    // Minimal AR session - no hit-test needed for avatar-only mode
+    // Initialize audio detection for animation triggering
+    initAudioDetection();
+    
+    // Request AR session with hit-test support for surface placement
     let sessionInit = { 
-      optionalFeatures: ['dom-overlay', 'local-floor', 'bounded-floor', 'unbounded'], 
+      requiredFeatures: ['local'],
+      optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor', 'bounded-floor', 'unbounded'], 
       domOverlay: { root: document.body } 
     };
     try { 
       xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit); 
     } catch (e) { 
-      console.warn('[AR] dom-overlay failed, retry minimal:', e); 
-      xrSession = await navigator.xr.requestSession('immersive-ar', {}); 
+      console.warn('[AR] dom-overlay failed, retry without:', e); 
+      sessionInit.optionalFeatures = ['hit-test', 'local-floor', 'bounded-floor', 'unbounded'];
+      delete sessionInit.domOverlay;
+      try {
+        xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+      } catch (e2) {
+        console.warn('[AR] hit-test failed, retry minimal:', e2);
+        xrSession = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['local'] });
+      }
     }
 
     // renderer canvas (full-screen)
@@ -98,6 +116,9 @@ export async function startHoloMode() {
     // scene/camera
     scene = new THREE.Scene(); 
     camera = new THREE.PerspectiveCamera();
+    
+    // Initialize animation clock
+    clock = new THREE.Clock();
     
     // Add lighting for 3D avatars
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -129,7 +150,31 @@ export async function startHoloMode() {
     }
 
     console.log(`[AR] Avatar Mode started - ref=${got.type || 'unknown'}`);
-    showToast('🎭 Avatar Mode - Audio Only');
+    
+    // Try to initialize hit-test for surface placement
+    try {
+      viewerSpace = await xrSession.requestReferenceSpace('viewer');
+      hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+      console.log('[AR] Hit-test enabled - tap to place avatar on surfaces');
+      showToast('👆 Tap on a surface to place avatar');
+      
+      // Create placement reticle (visual indicator)
+      const geometry = new THREE.RingGeometry(0.1, 0.12, 32);
+      const material = new THREE.MeshBasicMaterial({ 
+        color: 0x00ff00, 
+        side: THREE.DoubleSide,
+        opacity: 0.7,
+        transparent: true
+      });
+      reticle = new THREE.Mesh(geometry, material);
+      reticle.rotation.x = -Math.PI / 2; // Lay flat
+      reticle.visible = false;
+      scene.add(reticle);
+    } catch(e) {
+      console.warn('[AR] Hit-test not available, using fallback placement:', e);
+      showToast('🎭 Avatar Mode - Audio Only');
+      avatarPlaced = true; // Skip placement step
+    }
     
     // Disable camera if needed to prevent dual-camera conflict
     arToggledCameraOff = false;
@@ -144,15 +189,20 @@ export async function startHoloMode() {
       arToggledCameraOff = false;
     });
 
-    // Initialize raycaster for touch detection (avatar only)
+    // Initialize raycaster for touch detection (avatar manipulation)
     raycaster = new THREE.Raycaster();
     touchPointer = new THREE.Vector2();
     
     // Attach touch gesture handlers
     attachTouchHandlers();
 
-    // Load avatar immediately
+    // Load avatar (will be placed on tap if hit-test available, or immediately if not)
     loadRemoteAvatar();
+
+    // Add tap-to-place handler if hit-test is available
+    if (hitTestSource) {
+      xrSession.addEventListener('select', onSelectPlaceAvatar);
+    }
 
     xrSession.addEventListener('end', () => { cleanupXR(); });
     
@@ -184,8 +234,53 @@ function renderXR(_t, frame) {
     return; 
   }
 
-  // Simple render loop - just render the scene with avatar
+  // Handle hit-test for placement reticle (before avatar is placed)
+  if (hitTestSource && !avatarPlaced && reticle) {
+    const hitTestResults = frame.getHitTestResults(hitTestSource);
+    if (hitTestResults.length > 0) {
+      const hit = hitTestResults[0];
+      const pose = hit.getPose(refSpace);
+      
+      if (pose) {
+        reticle.visible = true;
+        reticle.position.set(
+          pose.transform.position.x,
+          pose.transform.position.y,
+          pose.transform.position.z
+        );
+        reticle.updateMatrixWorld(true);
+      }
+    } else {
+      reticle.visible = false;
+    }
+  }
+
+  // Update avatar animations if mixer exists
+  if (animationMixer && clock) {
+    const delta = clock.getDelta();
+    animationMixer.update(delta);
+  }
+
+  // Render the scene with avatar and/or reticle
   renderer.render(scene, camera);
+}
+
+// Handle tap to place avatar on surface
+function onSelectPlaceAvatar(event) {
+  if (!avatarModel || avatarPlaced) return;
+  
+  // Place avatar at reticle position
+  if (reticle && reticle.visible) {
+    avatarModel.position.copy(reticle.position);
+    scene.add(avatarModel);
+    
+    // Hide reticle and mark as placed
+    reticle.visible = false;
+    avatarPlaced = true;
+    
+    console.log('[AR] Avatar placed at:', avatarModel.position);
+    showToast('✓ Avatar placed! Pinch to resize, drag to move');
+  }
 }
 
 
@@ -234,20 +329,46 @@ async function loadRemoteAvatar() {
         // Scale avatar to reasonable size (RPM avatars are typically human-sized)
         avatarModel.scale.set(0.5, 0.5, 0.5);
         
-        // Position avatar in AR space: 1.5m in front of user, at ground level
-        avatarModel.position.set(0, 0, -1.5);
-        
         // Keep avatar upright - standing naturally
         avatarModel.rotation.set(0, 0, 0);
         
         // Create orange bounding box outline for avatar (initially hidden)
         createAvatarOutline();
         
-        // Add to scene independently (not parented to video plane)
-        scene.add(avatarModel);
+        // Set up animation mixer for avatar
+        animationMixer = new THREE.AnimationMixer(avatarModel);
+        console.log('[AR] AnimationMixer created for avatar');
+        
+        // Check if avatar has embedded animations
+        if (gltf.animations && gltf.animations.length > 0) {
+          console.log('[AR] Avatar has', gltf.animations.length, 'embedded animations');
+          gltf.animations.forEach((anim, i) => {
+            console.log(`  [${i}]: ${anim.name || 'Unnamed'} (${anim.duration.toFixed(2)}s)`);
+          });
+        } else {
+          console.log('[AR] No embedded animations - will load external animations');
+        }
+        
+        // Position avatar based on placement mode
+        if (avatarPlaced || !hitTestSource) {
+          // No hit-test available - place in front of user
+          avatarModel.position.set(0, 0, -1.5);
+          scene.add(avatarModel);
+          console.log('Avatar placed in fallback position');
+        } else {
+          // Hit-test available - avatar will be placed on tap
+          // Don't add to scene yet, wait for user tap
+          console.log('Avatar ready - waiting for placement tap');
+        }
         
         console.log('Avatar loaded successfully');
-        showToast('3D Avatar loaded!');
+        if (avatarPlaced || !hitTestSource) {
+          showToast('3D Avatar loaded!');
+        }
+        
+        // Load idle and speaking animations
+        loadIdleAnimation();
+        loadSpeakingAnimation();
       },
       (progress) => {
         console.log('Loading avatar:', Math.round((progress.loaded / progress.total) * 100) + '%');
@@ -372,6 +493,200 @@ function updateAvatarOutline() {
   
   // Scale the unit box to match current bounding box dimensions
   avatarOutline.scale.set(size.x, size.y, size.z);
+}
+
+/* ---------------- Animation Functions ---------------- */
+
+// Audio detection state
+let audioContext = null;
+let audioAnalyser = null;
+let audioSource = null; // MediaElementSource - can only be created once per element
+let isSpeaking = false;
+let audioCheckInterval = null;
+
+// Initialize audio level detection for remote participant
+export function initAudioDetection() {
+  if (!state.remoteAudioEl) {
+    console.warn('[AR] No remote audio element to analyze');
+    return;
+  }
+  
+  try {
+    // Create or reuse AudioContext
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('[AR] Created new AudioContext');
+    } else if (audioContext.state === 'suspended') {
+      audioContext.resume();
+      console.log('[AR] Resumed existing AudioContext');
+    }
+    
+    // Create or reuse analyser
+    if (!audioAnalyser) {
+      audioAnalyser = audioContext.createAnalyser();
+      audioAnalyser.fftSize = 256;
+      console.log('[AR] Created new AnalyserNode');
+    }
+    
+    // Create MediaElementSource only once (Web Audio API constraint)
+    if (!audioSource) {
+      audioSource = audioContext.createMediaElementSource(state.remoteAudioEl);
+      audioSource.connect(audioAnalyser);
+      audioAnalyser.connect(audioContext.destination);
+      console.log('[AR] Created MediaElementAudioSourceNode');
+    } else {
+      console.log('[AR] Reusing existing MediaElementAudioSourceNode');
+    }
+    
+    console.log('[AR] Audio detection initialized');
+    
+    // Start checking audio levels periodically
+    startAudioMonitoring();
+  } catch (err) {
+    console.error('[AR] Failed to initialize audio detection:', err);
+  }
+}
+
+// Monitor audio levels and update isSpeaking state
+function startAudioMonitoring() {
+  if (audioCheckInterval) return;
+  
+  const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+  const SPEAKING_THRESHOLD = 30; // Adjust based on testing
+  const CHECK_INTERVAL = 100; // Check every 100ms
+  
+  audioCheckInterval = setInterval(() => {
+    if (!audioAnalyser) {
+      stopAudioMonitoring();
+      return;
+    }
+    
+    audioAnalyser.getByteFrequencyData(dataArray);
+    
+    // Calculate average audio level
+    const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+    
+    const wasSpeaking = isSpeaking;
+    isSpeaking = average > SPEAKING_THRESHOLD;
+    
+    // Log state changes for debugging
+    if (isSpeaking !== wasSpeaking) {
+      console.log('[AR] Speaking state changed:', isSpeaking, '(level:', average.toFixed(1), ')');
+      handleSpeakingChange(isSpeaking);
+    }
+  }, CHECK_INTERVAL);
+}
+
+// Stop audio monitoring
+function stopAudioMonitoring() {
+  if (audioCheckInterval) {
+    clearInterval(audioCheckInterval);
+    audioCheckInterval = null;
+  }
+  isSpeaking = false;
+}
+
+// Handle speaking state change - blend animations
+function handleSpeakingChange(speaking) {
+  if (!animationMixer || !idleAction) return;
+  
+  if (speaking && speakingAction) {
+    // Fade from idle to speaking
+    idleAction.fadeOut(0.3);
+    speakingAction.reset().fadeIn(0.3).play();
+  } else if (!speaking && idleAction) {
+    // Fade from speaking back to idle
+    if (speakingAction) {
+      speakingAction.fadeOut(0.3);
+    }
+    idleAction.reset().fadeIn(0.3).play();
+  }
+}
+
+// Load idle/breathing animation for avatar
+async function loadIdleAnimation() {
+  if (!animationMixer || !avatarModel) {
+    console.warn('[AR] Cannot load idle animation - mixer or model not ready');
+    return;
+  }
+  
+  // For Ready Player Me avatars, we'll use a Mixamo idle animation
+  // Using a CDN-hosted FBX converted to GLB for RPM compatibility
+  const idleAnimationURL = 'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Breathing_Idle.glb';
+  
+  try {
+    console.log('[AR] Loading idle animation from:', idleAnimationURL);
+    
+    const loader = new GLTFLoader();
+    loader.load(
+      idleAnimationURL,
+      (gltf) => {
+        if (gltf.animations && gltf.animations.length > 0) {
+          const idleClip = gltf.animations[0];
+          idleAction = animationMixer.clipAction(idleClip);
+          idleAction.setLoop(THREE.LoopRepeat);
+          idleAction.clampWhenFinished = false;
+          idleAction.play();
+          
+          console.log('[AR] Idle animation loaded and playing:', idleClip.name, `(${idleClip.duration.toFixed(2)}s)`);
+          showToast('✨ Idle animation active');
+        } else {
+          console.warn('[AR] No animations found in idle animation file');
+        }
+      },
+      (progress) => {
+        console.log('[AR] Loading idle animation:', Math.round((progress.loaded / progress.total) * 100) + '%');
+      },
+      (error) => {
+        console.error('[AR] Failed to load idle animation:', error);
+        console.log('[AR] Avatar will remain static');
+      }
+    );
+  } catch (err) {
+    console.error('[AR] Error loading idle animation:', err);
+  }
+}
+
+// Load speaking/gesturing animation for avatar
+async function loadSpeakingAnimation() {
+  if (!animationMixer || !avatarModel) {
+    console.warn('[AR] Cannot load speaking animation - mixer or model not ready');
+    return;
+  }
+  
+  // Using Mixamo talking animation compatible with RPM avatars
+  const speakingAnimationURL = 'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Male_Talking.glb';
+  
+  try {
+    console.log('[AR] Loading speaking animation from:', speakingAnimationURL);
+    
+    const loader = new GLTFLoader();
+    loader.load(
+      speakingAnimationURL,
+      (gltf) => {
+        if (gltf.animations && gltf.animations.length > 0) {
+          const speakingClip = gltf.animations[0];
+          speakingAction = animationMixer.clipAction(speakingClip);
+          speakingAction.setLoop(THREE.LoopRepeat);
+          speakingAction.clampWhenFinished = false;
+          // Don't play yet - only when speaking detected
+          
+          console.log('[AR] Speaking animation loaded:', speakingClip.name, `(${speakingClip.duration.toFixed(2)}s)`);
+        } else {
+          console.warn('[AR] No animations found in speaking animation file');
+        }
+      },
+      (progress) => {
+        console.log('[AR] Loading speaking animation:', Math.round((progress.loaded / progress.total) * 100) + '%');
+      },
+      (error) => {
+        console.error('[AR] Failed to load speaking animation:', error);
+        console.log('[AR] Avatar will use idle animation only');
+      }
+    );
+  } catch (err) {
+    console.error('[AR] Error loading speaking animation:', err);
+  }
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
@@ -577,6 +892,23 @@ function cleanupXR() {
   // Detach touch handlers before cleanup
   detachTouchHandlers();
   
+  // Clean up hit-test resources
+  if (hitTestSource) {
+    hitTestSource.cancel();
+    hitTestSource = null;
+  }
+  
+  // Clean up reticle
+  if (reticle) {
+    if (reticle.parent) scene.remove(reticle);
+    if (reticle.geometry) reticle.geometry.dispose();
+    if (reticle.material) reticle.material.dispose();
+    reticle = null;
+  }
+  
+  // Reset placement state
+  avatarPlaced = false;
+  
   document.body.classList.remove('ar-active');
   holoBtn.hidden = false; 
   arClose.hidden = true;
@@ -589,6 +921,30 @@ function cleanupXR() {
     if (avatarOutline.geometry) avatarOutline.geometry.dispose();
     if (avatarOutline.material) avatarOutline.material.dispose();
     avatarOutline = null;
+  }
+  
+  // Clean up audio detection
+  stopAudioMonitoring();
+  // Note: We keep audioContext, audioAnalyser, and audioSource alive for reuse
+  // They will be reused on next AR entry to avoid Web Audio API constraint
+  // (MediaElementSource can only be created once per element)
+  isSpeaking = false;
+  
+  // Clean up animation system
+  if (idleAction) {
+    idleAction.stop();
+    idleAction = null;
+  }
+  if (speakingAction) {
+    speakingAction.stop();
+    speakingAction = null;
+  }
+  if (animationMixer) {
+    animationMixer.stopAllAction();
+    animationMixer = null;
+  }
+  if (clock) {
+    clock = null;
   }
   
   // Clean up avatar model
@@ -631,9 +987,10 @@ function cleanupXR() {
     }
   }
   renderer = scene = camera = null;
-  xrSession = refSpace = null;
+  xrSession = refSpace = viewerSpace = null;
   raycaster = touchPointer = null;
   gltfLoader = null;
+  frameRenderCount = 0;
 }
 
 // Export setup function for event listeners
