@@ -3,28 +3,23 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state, showToast, holoBtn, arClose } from './ui-controller.js';
-import { makeVideoTinyVisible } from './connection-manager.js';
 
 const $ = (id) => document.getElementById(id);
 
-let renderer, scene, camera, reticle, videoPlane, videoOutline;
-let xrSession = null, refSpace = null, viewerSpace = null, hitTestSource = null;
-let onSelectRef = null;
+let renderer, scene, camera;
+let xrSession = null, refSpace = null;
 let raycaster = null, touchPointer = null;
 let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
-let autoPlacementDelay = null;
-let autoPlacementTimer = null;
 
-// Touch gesture state
+// Touch gesture state (avatar only)
 let touchState = {
   active: false,
   touches: [],
   initialScale: 1,
   initialDistance: 0,
   dragStart: null,
-  planeStartPos: null,
-  targetObject: null // Track which object (videoPlane or avatarModel) is being manipulated
+  avatarStartPos: null
 };
 
 async function isARSupported() {
@@ -49,26 +44,6 @@ async function requestRefSpace(session, order) {
   return {space: null, type: null};
 }
 
-/** Drive a VideoTexture so it updates every frame. */
-function createVideoTextureWithUpdates(video) {
-  const tex = new THREE.VideoTexture(video);
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  tex.generateMipmaps = false;
-
-  if (typeof video.requestVideoFrameCallback === 'function') {
-    const tick = () => { 
-      tex.needsUpdate = true; 
-      try { video.requestVideoFrameCallback(tick); } catch {} 
-    };
-    try { video.requestVideoFrameCallback(tick); } catch {}
-  } else {
-    const iv = setInterval(() => { tex.needsUpdate = true; }, 33); // ~30fps
-    const oldDispose = tex.dispose.bind(tex);
-    tex.dispose = () => { clearInterval(iv); oldDispose(); };
-  }
-  return tex;
-}
 
 export async function startHoloMode() {
   const sup = await isARSupported();
@@ -78,16 +53,15 @@ export async function startHoloMode() {
   }
 
   try {
-    // prefer hit-test + dom overlay; soft-fallback to minimal
+    // Minimal AR session - no hit-test needed for avatar-only mode
     let sessionInit = { 
-      requiredFeatures: ['hit-test'], 
       optionalFeatures: ['dom-overlay', 'local-floor', 'bounded-floor', 'unbounded'], 
       domOverlay: { root: document.body } 
     };
     try { 
       xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit); 
     } catch (e) { 
-      console.warn('[AR] hit-test/dom-overlay failed, retry minimal:', e); 
+      console.warn('[AR] dom-overlay failed, retry minimal:', e); 
       xrSession = await navigator.xr.requestSession('immersive-ar', {}); 
     }
 
@@ -104,11 +78,6 @@ export async function startHoloMode() {
     holoBtn.hidden = true; 
     arClose.hidden = false;
 
-    // make sure AR video source is visible + playing (even if track attached earlier)
-    const hv = $('remoteHoloVideo');
-    makeVideoTinyVisible(hv);
-    try { hv.play().catch(() => {}); } catch {}
-
     // scene/camera
     scene = new THREE.Scene(); 
     camera = new THREE.PerspectiveCamera();
@@ -121,18 +90,10 @@ export async function startHoloMode() {
     directionalLight.position.set(0, 1, 1);
     scene.add(directionalLight);
 
-    // reticle (for hit-test path)
-    const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    reticle = new THREE.Mesh(ringGeo, ringMat);
-    reticle.matrixAutoUpdate = false; 
-    reticle.visible = false; 
-    scene.add(reticle);
-
     // link session
     await renderer.xr.setSession(xrSession);
 
-    // try to get a world-ish space; fallback to renderer default then viewer
+    // get reference space
     let got = await requestRefSpace(xrSession, ['local', 'local-floor', 'bounded-floor', 'unbounded']);
     if (!got.space) {
       got.space = renderer.xr.getReferenceSpace?.() || null;
@@ -143,8 +104,6 @@ export async function startHoloMode() {
       got = viewerTry.space ? viewerTry : got;
     }
     refSpace = got.space;
-    const viewerTry = await requestRefSpace(xrSession, ['viewer']);
-    viewerSpace = viewerTry.space || null;
 
     if (!refSpace) { 
       showToast('no compatible ref space'); 
@@ -152,62 +111,18 @@ export async function startHoloMode() {
       return; 
     }
 
-    // hit-test only if we have a viewerSpace and the API exists
-    try {
-      hitTestSource = (viewerSpace && xrSession.requestHitTestSource)
-        ? await xrSession.requestHitTestSource({ space: viewerSpace })
-        : null;
-    } catch (e) { 
-      console.warn('[AR] hit-test init failed', e); 
-      hitTestSource = null; 
-    }
+    console.log(`[AR] Avatar Mode started - ref=${got.type || 'unknown'}`);
+    showToast('🎭 Avatar Mode - Audio Only');
 
-    const labelRS = viewerTry.type || got.type || 'unknown';
-    const labelHT = hitTestSource ? 'on' : 'off';
-    console.log(`[AR] Session started - ref=${labelRS}, hitTest=${labelHT}`);
-    showToast(`AR ready · ref=${labelRS} · hitTest=${labelHT}`);
+    // Initialize raycaster for touch detection (avatar only)
+    raycaster = new THREE.Raycaster();
+    touchPointer = new THREE.Vector2();
+    
+    // Attach touch gesture handlers
+    attachTouchHandlers();
 
-    // place plane on XR select (works cross-device)
-    onSelectRef = () => tryPlaceVideoPlane();
-    xrSession.addEventListener('select', onSelectRef);
-
-    // Start automatic placement fallback - initial delay 2s, then retry every 500ms
-    console.log('[AR] Starting auto-placement timer (2s initial delay, 500ms retry)');
-    autoPlacementDelay = setTimeout(() => {
-      autoPlacementDelay = null;
-      
-      // Guard: verify session is still active
-      if (!xrSession || !renderer || !scene) {
-        console.log('[AR] Auto-placement cancelled - session ended before delay');
-        return;
-      }
-      
-      // After initial delay, start retry loop
-      autoPlacementTimer = setInterval(() => {
-        // Guard: verify session is still active
-        if (!xrSession || !renderer || !scene) {
-          console.log('[AR] Auto-placement cancelled - session ended');
-          clearInterval(autoPlacementTimer);
-          autoPlacementTimer = null;
-          return;
-        }
-        
-        if (!videoPlane && !placementInProgress) {
-          console.log('[AR] Auto-placement attempt - checking video stream');
-          tryPlaceVideoPlane();
-        } else if (videoPlane) {
-          console.log('[AR] Auto-placement complete - video placed');
-          clearInterval(autoPlacementTimer);
-          autoPlacementTimer = null;
-        }
-      }, 500);
-      
-      // Trigger first attempt immediately after delay
-      if (!videoPlane && !placementInProgress) {
-        console.log('[AR] Auto-placement initial attempt');
-        tryPlaceVideoPlane();
-      }
-    }, 2000);
+    // Load avatar immediately
+    loadRemoteAvatar();
 
     xrSession.addEventListener('end', () => { cleanupXR(); });
     renderer.setAnimationLoop(renderXR);
@@ -217,161 +132,16 @@ export async function startHoloMode() {
   }
 }
 
-let hitTestLogCounter = 0;
-let lastHitSuccess = false;
 function renderXR(_t, frame) {
   if (!frame) { 
     renderer?.render(scene, camera); 
     return; 
   }
 
-  if (hitTestSource && refSpace) {
-    const hits = frame.getHitTestResults(hitTestSource);
-    if (hits.length) {
-      const pose = hits[0].getPose(refSpace);
-      if (pose) { 
-        reticle.visible = true; 
-        reticle.matrix.fromArray(pose.transform.matrix);
-        
-        // Log first hit-test success for diagnostics
-        if (!lastHitSuccess) {
-          console.log('[AR] Hit-test success - surface detected');
-          lastHitSuccess = true;
-        }
-      }
-    } else { 
-      reticle.visible = false;
-      
-      // Log hit-test failures periodically (every 60 frames = ~1 second)
-      if (hitTestLogCounter % 60 === 0 && hitTestLogCounter < 300) {
-        console.log('[AR] Hit-test: no surface found (frame ' + hitTestLogCounter + ')');
-      }
-      hitTestLogCounter++;
-      lastHitSuccess = false;
-    }
-  }
-
-  // Ensure the texture uploads every XR frame (extra safety on Android)
-  if (videoPlane && videoPlane.material && videoPlane.material.map) {
-    videoPlane.material.map.needsUpdate = true;
-  }
-
+  // Simple render loop - just render the scene with avatar
   renderer.render(scene, camera);
 }
 
-let placementInProgress = false;
-
-function tryPlaceVideoPlane() {
-  if (videoPlane) {
-    console.log('[AR] Video plane already placed, skipping');
-    return;
-  }
-
-  if (placementInProgress) {
-    console.log('[AR] Placement already in progress, skipping duplicate attempt');
-    return;
-  }
-
-  console.log('[AR] tryPlaceVideoPlane called');
-  placementInProgress = true;
-
-  const remoteVid = $('remoteHoloVideo');
-  if (!remoteVid.srcObject) {
-    console.log('[AR] Remote video not ready, will retry when stream appears');
-    placementInProgress = false;
-    // Don't clear timer - let it retry later when stream might be ready
-    return;
-  }
-
-  // wait until the hidden video has decodable frames
-  const ensureReady = () => {
-    if (remoteVid.readyState >= 2 && remoteVid.videoWidth > 0 && remoteVid.videoHeight > 0) {
-      return Promise.resolve();
-    }
-    return new Promise(resolve => {
-      const onReady = () => { 
-        remoteVid.removeEventListener('loadeddata', onReady); 
-        resolve(); 
-      };
-      remoteVid.addEventListener('loadeddata', onReady, { once: true });
-      remoteVid.play().catch(() => {});
-    });
-  };
-
-  ensureReady().then(() => {
-    // Guard: verify session is still active before placing
-    if (!xrSession || !renderer || !scene || videoPlane) {
-      console.log('[AR] Placement cancelled - session ended or video already placed');
-      placementInProgress = false;
-      return;
-    }
-    
-    // Clear auto-placement interval now that placement is actually happening
-    if (autoPlacementTimer) {
-      clearInterval(autoPlacementTimer);
-      autoPlacementTimer = null;
-      console.log('[AR] Auto-placement interval cleared - video placement successful');
-    }
-    const geom = new THREE.PlaneGeometry(1.5, 1.0);
-    const texture = createVideoTextureWithUpdates(remoteVid);
-    const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-    videoPlane = new THREE.Mesh(geom, mat);
-
-    // Create orange wireframe outline for visual feedback (initially hidden)
-    const outlineGeom = new THREE.EdgesGeometry(geom);
-    const outlineMat = new THREE.LineBasicMaterial({ 
-      color: 0xff8c00,
-      linewidth: 3,
-      transparent: true,
-      opacity: 1.0
-    });
-    videoOutline = new THREE.LineSegments(outlineGeom, outlineMat);
-    videoOutline.visible = false;
-    videoOutline.renderOrder = 999;
-
-    if (hitTestSource && reticle?.visible) {
-      console.log('[AR] Using hit-test placement (reticle visible)');
-      const m = new THREE.Matrix4(); 
-      m.copy(reticle.matrix);
-      videoPlane.position.setFromMatrixPosition(m);
-      videoPlane.quaternion.setFromRotationMatrix(m);
-      showToast('Video placed via surface detection');
-    } else {
-      console.log('[AR] Using fallback placement (camera-relative, 1.5m ahead)');
-      // fallback: 1.5m in front of XR camera
-      const xrCam = renderer.xr.getCamera(camera);
-      const camPos = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
-      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion).normalize();
-      const pos = camPos.clone().add(forward.multiplyScalar(1.5));
-      videoPlane.position.copy(pos);
-      videoPlane.lookAt(camPos);
-      showToast('Video placed in front of camera');
-    }
-
-    scene.add(videoPlane);
-    scene.add(videoOutline);
-    
-    // Initialize raycaster for touch detection
-    raycaster = new THREE.Raycaster();
-    touchPointer = new THREE.Vector2();
-    
-    // Attach touch gesture handlers
-    attachTouchHandlers();
-    
-    // Store initial scale for pinch gestures
-    touchState.initialScale = videoPlane.scale.x;
-    
-    // Load avatar if available
-    loadRemoteAvatar();
-    
-    // Reset placement flag
-    placementInProgress = false;
-  }).catch((err) => {
-    console.error('[AR] Video placement failed:', err);
-    placementInProgress = false;
-    // Don't clear timer - allow retry
-  });
-}
 
 // Load Ready Player Me avatar for remote participant
 async function loadRemoteAvatar() {
@@ -418,19 +188,10 @@ async function loadRemoteAvatar() {
         // Scale avatar to reasonable size (RPM avatars are typically human-sized)
         avatarModel.scale.set(0.5, 0.5, 0.5);
         
-        // Position avatar upright and fixed to ground level
-        if (videoPlane) {
-          // Use video plane position as horizontal reference only
-          avatarModel.position.x = videoPlane.position.x + 0.5; // 0.5m to the right
-          avatarModel.position.z = videoPlane.position.z;
-          // Fix avatar to ground level (y=0 or slightly above)
-          avatarModel.position.y = 0;
-        } else {
-          // Fallback position if video plane not yet placed
-          avatarModel.position.set(0.5, 0, -1);
-        }
+        // Position avatar in AR space: 1.5m in front of user, at ground level
+        avatarModel.position.set(0, 0, -1.5);
         
-        // Keep avatar upright - no rotation copying from video plane
+        // Keep avatar upright - standing naturally
         avatarModel.rotation.set(0, 0, 0);
         
         // Create orange bounding box outline for avatar (initially hidden)
@@ -575,17 +336,8 @@ function getTouchDistance(t1, t2) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-function updateOutline() {
-  if (!videoPlane || !videoOutline) return;
-  
-  // Match video plane position, rotation, and scale exactly
-  videoOutline.position.copy(videoPlane.position);
-  videoOutline.quaternion.copy(videoPlane.quaternion);
-  videoOutline.scale.copy(videoPlane.scale);
-}
-
 function getTouchedObject(clientX, clientY) {
-  if (!raycaster || !renderer || !camera) return null;
+  if (!raycaster || !renderer || !camera || !avatarModel) return null;
   
   // Convert touch coordinates to normalized device coordinates (-1 to +1)
   const rect = renderer.domElement.getBoundingClientRect();
@@ -598,14 +350,8 @@ function getTouchedObject(clientX, clientY) {
   // Update raycaster with camera and pointer position
   raycaster.setFromCamera(touchPointer, xrCam);
   
-  // Check for intersections with both avatar and video plane
-  const objectsToCheck = [];
-  if (avatarModel) objectsToCheck.push(avatarModel);
-  if (videoPlane) objectsToCheck.push(videoPlane);
-  
-  if (objectsToCheck.length === 0) return null;
-  
-  const intersects = raycaster.intersectObjects(objectsToCheck, true); // true = check children
+  // Check for intersections with avatar only
+  const intersects = raycaster.intersectObjects([avatarModel], true); // true = check children
   
   if (intersects.length > 0) {
     // Return the top-level object that was intersected
@@ -614,11 +360,6 @@ function getTouchedObject(clientX, clientY) {
     // Check if it's the avatar or a child of the avatar
     if (avatarModel && (intersectedObj === avatarModel || avatarModel.children.includes(intersectedObj) || isDescendantOf(intersectedObj, avatarModel))) {
       return avatarModel;
-    }
-    
-    // Check if it's the video plane
-    if (videoPlane && intersectedObj === videoPlane) {
-      return videoPlane;
     }
   }
   
@@ -636,56 +377,50 @@ function isDescendantOf(obj, parent) {
 }
 
 function handleTouchStart(e) {
-  if (!videoPlane && !avatarModel) return;
+  if (!avatarModel) return;
   
   touchState.touches = Array.from(e.touches);
   
-  // Check if first touch is on video plane or avatar
+  // Check if first touch is on avatar
   const firstTouch = touchState.touches[0];
   const touchedObj = getTouchedObject(firstTouch.clientX, firstTouch.clientY);
   
   if (!touchedObj) {
-    // Touch is not on any interactive object - allow normal UI interaction
+    // Touch is not on avatar - allow normal UI interaction
     return;
   }
   
-  // Touch is on an object - activate gesture controls
+  // Touch is on avatar - activate gesture controls
   e.preventDefault();
   touchState.active = true;
-  touchState.targetObject = touchedObj;
   
   if (touchState.touches.length === 1) {
     // Single finger drag setup
     touchState.dragStart = { x: firstTouch.clientX, y: firstTouch.clientY };
-    touchState.planeStartPos = touchedObj.position.clone();
+    touchState.avatarStartPos = avatarModel.position.clone();
   } else if (touchState.touches.length === 2) {
     // Two finger pinch setup
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     touchState.initialDistance = getTouchDistance(t1, t2);
-    touchState.initialScale = touchedObj.scale.x;
+    touchState.initialScale = avatarModel.scale.x;
   }
   
-  // Show orange outline for touched object
-  if (touchedObj === videoPlane && videoOutline) {
-    videoOutline.visible = true;
-    updateOutline();
-  } else if (touchedObj === avatarModel && avatarOutline) {
+  // Show orange outline when touching avatar
+  if (avatarOutline) {
     avatarOutline.visible = true;
     updateAvatarOutline();
   }
 }
 
 function handleTouchMove(e) {
-  if (!touchState.active || !touchState.targetObject) return;
+  if (!touchState.active || !avatarModel) return;
   
   e.preventDefault();
   touchState.touches = Array.from(e.touches);
   
-  const targetObj = touchState.targetObject;
-  
   if (touchState.touches.length === 1 && touchState.dragStart) {
-    // Single finger drag - move object parallel to camera
+    // Single finger drag - move avatar parallel to camera
     const touch = touchState.touches[0];
     const deltaX = touch.clientX - touchState.dragStart.x;
     const deltaY = touch.clientY - touchState.dragStart.y;
@@ -696,17 +431,17 @@ function handleTouchMove(e) {
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(xrCam.quaternion);
     
     // Scale factor based on distance from camera (farther = larger movements)
-    const distanceFromCam = targetObj.position.distanceTo(xrCam.position);
+    const distanceFromCam = avatarModel.position.distanceTo(xrCam.position);
     const movementScale = distanceFromCam * 0.001;
     
-    const newPos = touchState.planeStartPos.clone();
+    const newPos = touchState.avatarStartPos.clone();
     newPos.add(right.multiplyScalar(deltaX * movementScale));
     newPos.add(up.multiplyScalar(-deltaY * movementScale));
     
-    targetObj.position.copy(newPos);
+    avatarModel.position.copy(newPos);
     
   } else if (touchState.touches.length === 2 && touchState.initialDistance > 0) {
-    // Two finger pinch - scale object
+    // Two finger pinch - scale avatar
     const t1 = touchState.touches[0];
     const t2 = touchState.touches[1];
     const currentDistance = getTouchDistance(t1, t2);
@@ -715,20 +450,12 @@ function handleTouchMove(e) {
     // Apply scale with min/max constraints (0.3x to 4x)
     const newScale = Math.max(0.3, Math.min(4.0, touchState.initialScale * scaleChange));
     
-    // Avatar uses uniform scale, video plane keeps z=1
-    if (targetObj === avatarModel) {
-      targetObj.scale.set(newScale, newScale, newScale);
-    } else if (targetObj === videoPlane) {
-      targetObj.scale.set(newScale, newScale, 1);
-    }
+    // Avatar uses uniform scale
+    avatarModel.scale.set(newScale, newScale, newScale);
   }
   
-  // Update outline to match the manipulated object
-  if (targetObj === videoPlane) {
-    updateOutline();
-  } else if (targetObj === avatarModel) {
-    updateAvatarOutline();
-  }
+  // Update outline to match avatar
+  updateAvatarOutline();
 }
 
 function handleTouchEnd(e) {
@@ -738,16 +465,12 @@ function handleTouchEnd(e) {
   touchState.touches = Array.from(e.touches);
   
   if (touchState.touches.length === 0) {
-    // All fingers lifted - hide outlines and clear target
+    // All fingers lifted - hide outline
     touchState.active = false;
     touchState.dragStart = null;
-    touchState.planeStartPos = null;
+    touchState.avatarStartPos = null;
     touchState.initialDistance = 0;
-    touchState.targetObject = null;
     
-    if (videoOutline) {
-      videoOutline.visible = false;
-    }
     if (avatarOutline) {
       avatarOutline.visible = false;
     }
@@ -755,7 +478,7 @@ function handleTouchEnd(e) {
     // Went from two fingers to one - reset drag
     const touch = touchState.touches[0];
     touchState.dragStart = { x: touch.clientX, y: touch.clientY };
-    touchState.planeStartPos = touchState.targetObject ? touchState.targetObject.position.clone() : null;
+    touchState.avatarStartPos = avatarModel ? avatarModel.position.clone() : null;
     touchState.initialDistance = 0;
   }
 }
@@ -786,7 +509,7 @@ function detachTouchHandlers() {
     initialScale: 1,
     initialDistance: 0,
     dragStart: null,
-    planeStartPos: null
+    avatarStartPos: null
   };
 }
 
@@ -796,25 +519,6 @@ export async function endHoloMode() {
 }
 
 function cleanupXR() {
-  // Clear auto-placement delay timeout if active
-  if (autoPlacementDelay) {
-    clearTimeout(autoPlacementDelay);
-    autoPlacementDelay = null;
-    console.log('[AR] Auto-placement delay timeout cleared during cleanup');
-  }
-  
-  // Clear auto-placement interval if active
-  if (autoPlacementTimer) {
-    clearInterval(autoPlacementTimer);
-    autoPlacementTimer = null;
-    console.log('[AR] Auto-placement interval cleared during cleanup');
-  }
-  
-  // Reset hit-test logging state
-  hitTestLogCounter = 0;
-  lastHitSuccess = false;
-  placementInProgress = false;
-  
   // Detach touch handlers before cleanup
   detachTouchHandlers();
   
@@ -822,17 +526,6 @@ function cleanupXR() {
   holoBtn.hidden = false; 
   arClose.hidden = true;
 
-  const hv = $('remoteHoloVideo');
-  if (hv) { 
-    hv.setAttribute('hidden', ''); 
-    hv.removeAttribute('style'); 
-  }
-
-  if (xrSession && onSelectRef) { 
-    try { xrSession.removeEventListener('select', onSelectRef); } catch {} 
-  }
-  onSelectRef = null;
-  
   // Clean up avatar outline
   if (avatarOutline) {
     if (avatarOutline.parent) {
@@ -882,8 +575,8 @@ function cleanupXR() {
       renderer.domElement.parentNode.removeChild(renderer.domElement); 
     }
   }
-  renderer = scene = camera = reticle = videoPlane = videoOutline = null;
-  xrSession = refSpace = viewerSpace = hitTestSource = null;
+  renderer = scene = camera = null;
+  xrSession = refSpace = null;
   raycaster = touchPointer = null;
   gltfLoader = null;
 }
