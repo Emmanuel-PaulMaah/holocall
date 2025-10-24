@@ -407,10 +407,22 @@ export function toggleMic() {
   setUIState({ micOn: next }); 
 }
 
+// Callback for AR mode to be notified of camera toggles
+let onCameraToggleCallback = null;
+
+export function setOnCameraToggleCallback(callback) {
+  onCameraToggleCallback = callback;
+}
+
 export function toggleCam() { 
   const next = !state.camOn; 
   for (const t of state.localTracks) {
     if (t.kind === 'video') t.mediaStreamTrack.enabled = next; 
   }
   setUIState({ camOn: next }); 
+  
+  // Notify AR mode if callback is registered
+  if (onCameraToggleCallback) {
+    onCameraToggleCallback(next);
+  }
 }

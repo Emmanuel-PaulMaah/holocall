@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state, showToast, holoBtn, arClose } from './ui-controller.js';
+import { toggleCam, setOnCameraToggleCallback } from './connection-manager.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,6 +12,7 @@ let xrSession = null, refSpace = null;
 let raycaster = null, touchPointer = null;
 let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
+let arToggledCameraOff = false; // Track if AR entry disabled camera
 
 // Touch gesture state (avatar only)
 let touchState = {
@@ -113,6 +115,19 @@ export async function startHoloMode() {
 
     console.log(`[AR] Avatar Mode started - ref=${got.type || 'unknown'}`);
     showToast('🎭 Avatar Mode - Audio Only');
+    
+    // Disable camera if needed to prevent dual-camera conflict
+    arToggledCameraOff = false;
+    if (state.camOn) {
+      toggleCam(); // Turn off camera (updates UI and track)
+      arToggledCameraOff = true; // Flag that we turned it off
+    }
+    
+    // Register callback to detect user camera toggles during AR
+    setOnCameraToggleCallback(() => {
+      // User manually toggled camera during AR - don't auto-restore on exit
+      arToggledCameraOff = false;
+    });
 
     // Initialize raycaster for touch detection (avatar only)
     raycaster = new THREE.Raycaster();
@@ -519,6 +534,15 @@ export async function endHoloMode() {
 }
 
 function cleanupXR() {
+  // Unregister camera toggle callback
+  setOnCameraToggleCallback(null);
+  
+  // Restore camera only if AR entry turned it off AND user didn't manually toggle it
+  if (arToggledCameraOff && !state.camOn) {
+    toggleCam(); // Turn camera back on (updates UI and track)
+  }
+  arToggledCameraOff = false;
+  
   // Detach touch handlers before cleanup
   detachTouchHandlers();
   
