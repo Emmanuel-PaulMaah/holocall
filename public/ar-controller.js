@@ -13,6 +13,7 @@ let raycaster = null, touchPointer = null;
 let avatarModel = null, avatarOutline = null;
 let gltfLoader = null;
 let arToggledCameraOff = false; // Track if AR entry disabled camera
+let frameRenderCount = 0; // Track if frames are actually rendering
 
 // Touch gesture state (avatar only)
 let touchState = {
@@ -25,13 +26,27 @@ let touchState = {
 };
 
 async function isARSupported() {
-  if (!('xr' in navigator)) return { ok: false, why: 'WebXR not available in this browser' };
+  if (!('xr' in navigator)) {
+    return { 
+      ok: false, 
+      why: 'AR mode requires a compatible browser. Try Chrome or Samsung Internet.' 
+    };
+  }
+  
   try { 
-    return (await navigator.xr.isSessionSupported('immersive-ar')) 
-      ? {ok: true} 
-      : {ok: false, why: 'immersive-AR not supported on this device'}; 
+    const supported = await navigator.xr.isSessionSupported('immersive-ar');
+    if (!supported) {
+      return { 
+        ok: false, 
+        why: 'AR mode is not available on this device. Your device needs ARCore support. Normal video calling works great!' 
+      };
+    }
+    return { ok: true };
   } catch(e) { 
-    return { ok: false, why: e?.message || 'XR support check failed' }; 
+    return { 
+      ok: false, 
+      why: 'AR mode is not available on this device. Normal video calling works great!' 
+    }; 
   }
 }
 
@@ -140,14 +155,30 @@ export async function startHoloMode() {
     loadRemoteAvatar();
 
     xrSession.addEventListener('end', () => { cleanupXR(); });
+    
+    // Start render loop
+    frameRenderCount = 0;
     renderer.setAnimationLoop(renderXR);
+    
+    // Safeguard: detect if AR session isn't rendering (device lacks proper ARCore support)
+    setTimeout(() => {
+      if (frameRenderCount === 0 && xrSession) {
+        // No frames rendered after 3 seconds - device likely doesn't support AR properly
+        console.warn('[AR] No frames rendered - device may lack ARCore support');
+        showToast('AR mode is not working on this device. Try a device with ARCore support. Normal video calling works great!');
+        endHoloMode();
+      }
+    }, 3000);
   } catch(e) {
     console.error('[AR] start failed:', e);
-    showToast(e?.message || e?.name || 'AR start failed');
+    showToast('AR mode is not available on this device. Your device needs ARCore support. Normal video calling works great!');
+    await cleanupXR();
   }
 }
 
 function renderXR(_t, frame) {
+  frameRenderCount++; // Track that frames are rendering
+  
   if (!frame) { 
     renderer?.render(scene, camera); 
     return; 

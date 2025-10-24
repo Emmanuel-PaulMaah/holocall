@@ -1,0 +1,115 @@
+Incoming call modal created and hidden
+presence-tracker.js:11 Starting presence tracking...
+push-notifications.js:43 Service Worker registered: ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://dbfb31be-1738-4ca6-a671-3abede82c9a6-00-1od58wej2n7ur.spock.replit.dev/', …}
+push-notifications.js:92 Already subscribed to push notifications
+call-notifications.js:73 Subscribed to call notifications on channel: call:e92cf057-d52e-4108-813e-d6cdbdb7752c
+call-notifications.js:70 Channel subscription status: SUBSCRIBED
+ar-controller.js:116 [AR] Avatar Mode started - ref=local
+ar-controller.js:187 Loading avatar from: https://models.readyplayer.me/68f39a3b4e825b15ec2b64d7.glb
+ar-controller.js:222 Loading avatar: 1%
+ar-controller.js:222 Loading avatar: 3%
+ar-controller.js:222 Loading avatar: 4%
+ar-controller.js:222 Loading avatar: 6%
+ar-controller.js:222 Loading avatar: 8%
+ar-controller.js:222 Loading avatar: 9%
+2ar-controller.js:222 Loading avatar: 11%
+ar-controller.js:222 Loading avatar: 12%
+ar-controller.js:222 Loading avatar: 15%
+ar-controller.js:222 Loading avatar: 17%
+ar-controller.js:222 Loading avatar: 18%
+ar-controller.js:222 Loading avatar: 20%
+ar-controller.js:222 Loading avatar: 21%
+ar-controller.js:222 Loading avatar: 23%
+2ar-controller.js:222 Loading avatar: 24%
+ar-controller.js:222 Loading avatar: 26%
+ar-controller.js:222 Loading avatar: 27%
+ar-controller.js:222 Loading avatar: 29%
+ar-controller.js:222 Loading avatar: 31%
+ar-controller.js:222 Loading avatar: 32%
+ar-controller.js:222 Loading avatar: 33%
+ar-controller.js:222 Loading avatar: 35%
+ar-controller.js:222 Loading avatar: 36%
+ar-controller.js:222 Loading avatar: 37%
+ar-controller.js:222 Loading avatar: 38%
+ar-controller.js:222 Loading avatar: 40%
+2ar-controller.js:222 Loading avatar: 41%
+ar-controller.js:222 Loading avatar: 43%
+ar-controller.js:222 Loading avatar: 44%
+ar-controller.js:222 Loading avatar: 46%
+ar-controller.js:222 Loading avatar: 47%
+2ar-controller.js:222 Loading avatar: 49%
+ar-controller.js:222 Loading avatar: 50%
+ar-controller.js:222 Loading avatar: 51%
+ar-controller.js:222 Loading avatar: 54%
+ar-controller.js:222 Loading avatar: 56%
+ar-controller.js:222 Loading avatar: 57%
+ar-controller.js:222 Loading avatar: 60%
+ar-controller.js:222 Loading avatar: 61%
+ar-controller.js:222 Loading avatar: 63%
+ar-controller.js:222 Loading avatar: 64%
+ar-controller.js:222 Loading avatar: 66%
+ar-controller.js:222 Loading avatar: 67%
+ar-controller.js:222 Loading avatar: 69%
+ar-controller.js:222 Loading avatar: 70%
+ar-controller.js:222 Loading avatar: 72%
+ar-controller.js:222 Loading avatar: 73%
+ar-controller.js:222 Loading avatar: 75%
+ar-controller.js:222 Loading avatar: 76%
+ar-controller.js:222 Loading avatar: 77%
+ar-controller.js:222 Loading avatar: 78%
+ar-controller.js:222 Loading avatar: 80%
+ar-controller.js:222 Loading avatar: 81%
+ar-controller.js:222 Loading avatar: 83%
+ar-controller.js:222 Loading avatar: 84%
+ar-controller.js:222 Loading avatar: 86%
+ar-controller.js:222 Loading avatar: 87%
+ar-controller.js:222 Loading avatar: 89%
+ar-controller.js:222 Loading avatar: 90%
+ar-controller.js:222 Loading avatar: 91%
+ar-controller.js:222 Loading avatar: 92%
+ar-controller.js:222 Loading avatar: 94%
+ar-controller.js:222 Loading avatar: 95%
+2ar-controller.js:222 Loading avatar: 97%
+ar-controller.js:222 Loading avatar: 99%
+ar-controller.js:222 Loading avatar: 100%
+ar-controller.js:235 === Avatar Model Inspection ===
+ar-controller.js:248 ✓ Found SkinnedMesh: "EyeLeft" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:262 ✓ Found morph targets in "EyeLeft": 2 blend shapes
+ar-controller.js:272   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:248 ✓ Found SkinnedMesh: "EyeRight" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:262 ✓ Found morph targets in "EyeRight": 2 blend shapes
+ar-controller.js:272   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Head" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:262 ✓ Found morph targets in "Wolf3D_Head": 2 blend shapes
+ar-controller.js:272   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Teeth" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:262 ✓ Found morph targets in "Wolf3D_Teeth": 2 blend shapes
+ar-controller.js:272   Blend shapes: mouthOpen, mouthSmile
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Hair" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Glasses" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Facewear" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Top" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Bottom" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Outfit_Footwear" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:248 ✓ Found SkinnedMesh: "Wolf3D_Body" with 67 bones
+ar-controller.js:253   Sample bones: Hips, Spine, Spine1, Spine2, Neck...
+ar-controller.js:278 
+--- Summary ---
+ar-controller.js:279 Rigged: YES (67 bones)
+ar-controller.js:280 Blend Shapes: YES (4 meshes with morph targets)
+ar-controller.js:283 → Avatar can be animated with skeletal animations
+ar-controller.js:286 → Avatar supports facial expressions and blend shape animations
+ar-controller.js:289 ===============================
+
+ar-controller.js:324 Avatar outline created
+ar-controller.js:218 Avatar loaded successfully
