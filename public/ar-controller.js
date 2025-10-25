@@ -722,155 +722,117 @@ function stopAudioMonitoring() {
   isSpeaking = false;
 }
 
-// Handle speaking state change - blend animations
+// Handle speaking state change - audio-reactive mouth movement handles this
 function handleSpeakingChange(speaking) {
-  if (!animationMixer || !idleAction) return;
+  // Speaking animation is handled by audio-reactive mouth movement (blend shapes)
+  // The mouth opens/closes automatically based on audio volume in updateMouthAnimation()
   
-  if (speaking && speakingAction) {
-    // Fade from idle to speaking
-    idleAction.fadeOut(0.3);
-    speakingAction.reset().fadeIn(0.3).play();
-  } else if (!speaking && idleAction) {
-    // Fade from speaking back to idle
-    if (speakingAction) {
-      speakingAction.fadeOut(0.3);
-    }
-    idleAction.reset().fadeIn(0.3).play();
+  // Optional: Could add subtle head movement or gestures here in the future
+  if (speaking) {
+    console.log('[AR] 🗣️ Speaking detected - mouth animation active');
+  } else {
+    console.log('[AR] 🤐 Speaking stopped - mouth animation idle');
   }
 }
 
-// Load idle/breathing animation for avatar
-async function loadIdleAnimation() {
+// Create procedural idle/breathing animation for avatar
+// Uses keyframe animation to create subtle breathing movement
+function loadIdleAnimation() {
   if (!animationMixer || !avatarModel) {
     console.warn('[AR] Cannot load idle animation - mixer or model not ready');
     return;
   }
   
-  // Use a reliable Mixamo idle animation
-  // Alternative URLs if primary fails
-  const animationURLs = [
-    'https://models.readyplayer.me/animations/idle.glb',
-    'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Breathing_Idle.glb'
-  ];
+  console.log('[AR] 🎬 Creating procedural breathing animation...');
   
-  let currentURLIndex = 0;
-  
-  const tryLoadAnimation = () => {
-    if (currentURLIndex >= animationURLs.length) {
-      console.error('[AR] ❌ ALL IDLE ANIMATION URLs FAILED - Avatar will be static');
-      showToast('⚠️ Animation loading failed');
-      return;
+  // Find the Spine bone for breathing animation
+  let spineBone = null;
+  avatarModel.traverse((child) => {
+    if (child.isBone && child.name.toLowerCase().includes('spine')) {
+      spineBone = child;
     }
-    
-    const url = animationURLs[currentURLIndex];
-    console.log('[AR] 🎬 Loading idle animation from URL #' + (currentURLIndex + 1) + ':', url);
-    
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        console.log('[AR] ✓ Idle animation file loaded, checking for animations...');
-        console.log('[AR] - Animations found:', gltf.animations?.length || 0);
-        
-        if (gltf.animations && gltf.animations.length > 0) {
-          const idleClip = gltf.animations[0];
-          console.log('[AR] - Animation name:', idleClip.name || 'Unnamed');
-          console.log('[AR] - Animation duration:', idleClip.duration.toFixed(2) + 's');
-          
-          idleAction = animationMixer.clipAction(idleClip);
-          idleAction.setLoop(THREE.LoopRepeat);
-          idleAction.clampWhenFinished = false;
-          idleAction.weight = 1.0;
-          idleAction.play();
-          
-          console.log('[AR] ✅ IDLE ANIMATION PLAYING!');
-          showToast('✨ Idle animation active');
-        } else {
-          console.warn('[AR] ⚠️ No animations in file, trying next URL...');
-          currentURLIndex++;
-          tryLoadAnimation();
-        }
-      },
-      (progress) => {
-        const percent = Math.round((progress.loaded / progress.total) * 100);
-        if (percent === 50 || percent === 100) {
-          console.log('[AR] 📥 Idle animation loading:', percent + '%');
-        }
-      },
-      (error) => {
-        console.error('[AR] ❌ Failed to load from URL #' + (currentURLIndex + 1));
-        console.error('[AR] Error:', error.message || error);
-        currentURLIndex++;
-        console.log('[AR] Trying next URL...');
-        tryLoadAnimation();
-      }
-    );
-  };
+  });
   
-  tryLoadAnimation();
-}
-
-// Load speaking/gesturing animation for avatar
-async function loadSpeakingAnimation() {
-  if (!animationMixer || !avatarModel) {
-    console.warn('[AR] Cannot load speaking animation - mixer or model not ready');
+  if (!spineBone) {
+    console.warn('[AR] ⚠️ No Spine bone found - skipping breathing animation');
     return;
   }
   
-  // Use reliable Mixamo talking animations
-  const animationURLs = [
-    'https://models.readyplayer.me/animations/male-talking.glb',
-    'https://cdn.jsdelivr.net/gh/readyplayerme/animation-library@main/Male_Talking.glb'
+  console.log('[AR] ✓ Found bone for breathing:', spineBone.name);
+  
+  // IMPORTANT: Capture the spine bone's bind pose (current position)
+  // Ready Player Me rigs use non-zero local translations for spine bones
+  // We must keyframe AROUND this base position for additive breathing
+  const basePos = spineBone.position.clone();
+  console.log('[AR] Spine bone bind pose:', {
+    x: basePos.x.toFixed(4),
+    y: basePos.y.toFixed(4),
+    z: basePos.z.toFixed(4)
+  });
+  
+  // Create breathing animation (3-second cycle) - keyframes around bind pose
+  const times = [0, 1.5, 3]; // Keyframe times in seconds
+  const breathAmount = 0.003; // Subtle breathing movement (3mm)
+  
+  const positionValues = [
+    basePos.x, basePos.y, basePos.z,                        // Start: bind pose
+    basePos.x, basePos.y + breathAmount, basePos.z,         // Middle: inhale
+    basePos.x, basePos.y, basePos.z                         // End: exhale
   ];
   
-  let currentURLIndex = 0;
+  // Create keyframe tracks
+  const positionKF = new THREE.VectorKeyframeTrack(
+    spineBone.name + '.position',
+    times,
+    positionValues
+  );
   
-  const tryLoadAnimation = () => {
-    if (currentURLIndex >= animationURLs.length) {
-      console.warn('[AR] ⚠️ All speaking animation URLs failed - using idle only');
-      return;
-    }
-    
-    const url = animationURLs[currentURLIndex];
-    console.log('[AR] 🎬 Loading speaking animation from URL #' + (currentURLIndex + 1) + ':', url);
-    
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        console.log('[AR] ✓ Speaking animation file loaded, checking for animations...');
-        console.log('[AR] - Animations found:', gltf.animations?.length || 0);
-        
-        if (gltf.animations && gltf.animations.length > 0) {
-          const speakingClip = gltf.animations[0];
-          console.log('[AR] - Animation name:', speakingClip.name || 'Unnamed');
-          console.log('[AR] - Animation duration:', speakingClip.duration.toFixed(2) + 's');
-          
-          speakingAction = animationMixer.clipAction(speakingClip);
-          speakingAction.setLoop(THREE.LoopRepeat);
-          speakingAction.clampWhenFinished = false;
-          speakingAction.weight = 1.0;
-          // Don't play yet - only when speaking detected
-          
-          console.log('[AR] ✅ SPEAKING ANIMATION LOADED (will play when audio detected)');
-        } else {
-          console.warn('[AR] ⚠️ No animations in file, trying next URL...');
-          currentURLIndex++;
-          tryLoadAnimation();
-        }
-      },
-      undefined,
-      (error) => {
-        console.error('[AR] ❌ Failed to load from URL #' + (currentURLIndex + 1));
-        console.error('[AR] Error:', error.message || error);
-        currentURLIndex++;
-        console.log('[AR] Trying next URL...');
-        tryLoadAnimation();
-      }
-    );
-  };
+  // Create animation clip (3 seconds to match keyframe times)
+  const breathingClip = new THREE.AnimationClip('Breathing', 3, [positionKF]);
   
-  tryLoadAnimation();
+  // Create and play action
+  idleAction = animationMixer.clipAction(breathingClip);
+  idleAction.setLoop(THREE.LoopRepeat);
+  idleAction.play();
+  
+  console.log('[AR] ✅ Procedural breathing animation playing!');
+  
+  /* 
+   * TO ADD MIXAMO ANIMATIONS LATER:
+   * 1. Download idle animation from Mixamo (mixamo.com) as FBX
+   * 2. Convert FBX to GLB using: https://www.mixamo-to-glb.com/
+   * 3. Save GLB file to public/animations/idle.glb
+   * 4. Replace this function to load from local file:
+   *    const loader = new GLTFLoader();
+   *    loader.load('/animations/idle.glb', (gltf) => {
+   *      idleAction = animationMixer.clipAction(gltf.animations[0]);
+   *      idleAction.setLoop(THREE.LoopRepeat);
+   *      idleAction.play();
+   *    });
+   */
+}
+
+// Speaking animation is handled by audio-reactive mouth movement (blend shapes)
+// No skeletal speaking animation needed - mouth movement is more natural and performant
+function loadSpeakingAnimation() {
+  console.log('[AR] ℹ️ Speaking animation handled by audio-reactive mouth movement');
+  
+  /* 
+   * NOTE: We use blend shape (morph target) animation for mouth movement,
+   * which is more natural and responsive than skeletal animations.
+   * 
+   * TO ADD MIXAMO GESTURING ANIMATIONS LATER (optional):
+   * 1. Download talking/gesturing animation from Mixamo as FBX
+   * 2. Convert to GLB using: https://www.mixamo-to-glb.com/
+   * 3. Save to public/animations/talking.glb
+   * 4. Load and blend with mouth movement:
+   *    const loader = new GLTFLoader();
+   *    loader.load('/animations/talking.glb', (gltf) => {
+   *      speakingAction = animationMixer.clipAction(gltf.animations[0]);
+   *      speakingAction.setLoop(THREE.LoopRepeat);
+   *      // Don't play immediately - triggered by audio detection
+   *    });
+   */
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
