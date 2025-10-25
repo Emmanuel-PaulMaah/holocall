@@ -23,7 +23,10 @@ The application uses a Node.js + Express backend and a Vanilla JavaScript fronte
 -   **Web Push Notifications:** Service worker-based notifications for incoming calls, utilizing VAPID keys and JWT-based one-time decline tokens.
 
 ### System Design Choices
-The application uses an Express server to serve static frontend files. Supabase handles server-side authentication, creating secure HTTP-only session cookies. API endpoints for configuration, authentication, user data, and LiveKit token generation are protected. The architecture is stateless, designed for Replit Autoscale. Robust error handling provides clear messages and graceful degradation. CORS is strictly validated. AR mode includes device compatibility detection with graceful fallbacks for non-ARCore devices and an avatar skeletal animation system with idle and speaking animations, blended via audio-reactive triggers using Web Audio API.
+The application uses an Express server to serve static frontend files. Supabase handles server-side authentication, creating secure HTTP-only session cookies. API endpoints for configuration, authentication, user data, and LiveKit token generation are protected. The architecture is stateless, designed for Replit Autoscale. Robust error handling provides clear messages and graceful degradation. CORS is strictly validated. AR mode includes device compatibility detection with graceful fallbacks for non-ARCore devices and a hybrid avatar animation system:
+-   **Audio-Reactive Mouth Movement:** Real-time blend shape (morph target) animation using the `mouthOpen` blend shape on Ready Player Me avatars, driven by Web Audio API frequency analysis of remote participant audio. Smoothing factor prevents jitter (0.3), mouth opens naturally (0-60% range based on volume).
+-   **Procedural Breathing Animation:** Lightweight Three.js keyframe animation on the Spine bone, preserving bind pose with additive 3mm Y-axis movement over a 3-second cycle for subtle idle breathing.
+-   **Late Audio Initialization:** Automatic retry mechanism in the render loop attempts audio detection initialization every 2 seconds if the remote audio element appears after AR session starts (handles late joins).
 
 ## External Dependencies
 
