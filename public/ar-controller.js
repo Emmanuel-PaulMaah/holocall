@@ -16,6 +16,11 @@ let arToggledCameraOff = false; // Track if AR entry disabled camera
 let frameRenderCount = 0; // Track if frames are actually rendering
 let hitTestSource = null; // Hit-test source for surface placement
 let reticle = null; // Visual indicator for placement
+
+// Audio-reactive blend shape animation
+let mouthMeshes = []; // Meshes with mouthOpen blend shape
+let currentMouthValue = 0; // Smoothed mouth open value (0-1)
+const MOUTH_SMOOTHING = 0.3; // Smoothing factor (0.1=very smooth, 0.5=responsive)
 let avatarPlaced = false; // Track if avatar has been placed
 let animationMixer = null; // Three.js AnimationMixer for avatar animations
 let idleAction = null; // Idle/breathing animation
@@ -270,6 +275,9 @@ function renderXR(_t, frame) {
     animationMixer.update(delta);
   }
 
+  // Update audio-reactive mouth movement
+  updateMouthAnimation();
+
   // Render the scene with avatar and/or reticle
   renderer.render(scene, camera);
 }
@@ -487,6 +495,34 @@ function inspectAvatarModel(gltf) {
   avatarModel.userData.hasMorphTargets = hasMorphTargets;
   avatarModel.userData.boneCount = boneCount;
   avatarModel.userData.morphTargetInfo = morphTargetInfo;
+  
+  // Store references to meshes with mouthOpen blend shape for audio-reactive animation
+  storeMouthMeshes(gltf);
+}
+
+// Store references to meshes with mouthOpen blend shape
+function storeMouthMeshes(gltf) {
+  mouthMeshes = []; // Clear previous references
+  
+  gltf.scene.traverse((child) => {
+    if (child.morphTargetDictionary && child.morphTargetInfluences) {
+      const mouthOpenIndex = child.morphTargetDictionary['mouthOpen'];
+      
+      if (mouthOpenIndex !== undefined) {
+        mouthMeshes.push({
+          mesh: child,
+          morphIndex: mouthOpenIndex
+        });
+        console.log(`[AR] 👄 Found mouthOpen blend shape in "${child.name}" at index ${mouthOpenIndex}`);
+      }
+    }
+  });
+  
+  if (mouthMeshes.length > 0) {
+    console.log(`[AR] ✓ Audio-reactive mouth movement ready (${mouthMeshes.length} meshes)`);
+  } else {
+    console.warn('[AR] ⚠️ No mouthOpen blend shapes found - mouth animation disabled');
+  }
 }
 
 // Create bounding box outline for avatar
@@ -538,6 +574,49 @@ function updateAvatarOutline() {
 }
 
 /* ---------------- Animation Functions ---------------- */
+
+// Update audio-reactive mouth animation based on audio volume
+function updateMouthAnimation() {
+  // Only update if we have mouth meshes and audio analyser
+  if (mouthMeshes.length === 0 || !audioAnalyser) {
+    return;
+  }
+  
+  // Get audio volume data
+  const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+  audioAnalyser.getByteFrequencyData(dataArray);
+  
+  // Calculate average volume (0-255 range)
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    sum += dataArray[i];
+  }
+  const avgVolume = sum / dataArray.length;
+  
+  // Normalize to 0-1 range and apply threshold
+  // Volume below 10 is considered silence
+  const volumeThreshold = 10;
+  let targetMouthValue = 0;
+  
+  if (avgVolume > volumeThreshold) {
+    // Map volume (10-255) to mouth open (0-1)
+    // We'll use a smaller range (0-0.6) for more natural looking mouth
+    targetMouthValue = Math.min((avgVolume - volumeThreshold) / 100, 0.6);
+  }
+  
+  // Apply smoothing to avoid jitter
+  currentMouthValue += (targetMouthValue - currentMouthValue) * MOUTH_SMOOTHING;
+  
+  // Apply to all meshes with mouthOpen blend shape
+  mouthMeshes.forEach(({ mesh, morphIndex }) => {
+    mesh.morphTargetInfluences[morphIndex] = currentMouthValue;
+  });
+  
+  // Debug log every 2 seconds (120 frames at 60fps)
+  if (frameRenderCount % 120 === 0 && currentMouthValue > 0.01) {
+    console.log(`[AR] 🎤 Audio volume: ${avgVolume.toFixed(1)} → Mouth open: ${(currentMouthValue * 100).toFixed(1)}%`);
+  }
+}
 
 // Audio detection state
 let audioContext = null;
