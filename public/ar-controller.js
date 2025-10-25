@@ -275,6 +275,12 @@ function renderXR(_t, frame) {
     animationMixer.update(delta);
   }
 
+  // Retry audio initialization if remote audio element appeared late (e.g., late join)
+  // Check every 2 seconds (120 frames at 60fps)
+  if (!audioInitAttempted && frameRenderCount % 120 === 0) {
+    initAudioDetection();
+  }
+
   // Update audio-reactive mouth movement
   updateMouthAnimation();
 
@@ -624,12 +630,18 @@ let audioAnalyser = null;
 let audioSource = null; // MediaElementSource - can only be created once per element
 let isSpeaking = false;
 let audioCheckInterval = null;
+let audioInitAttempted = false; // Track if we've successfully initialized audio
 
 // Initialize audio level detection for remote participant
 export function initAudioDetection() {
   if (!state.remoteAudioEl) {
-    console.warn('[AR] No remote audio element to analyze');
-    return;
+    console.warn('[AR] No remote audio element to analyze - will retry when available');
+    return false; // Signal that initialization failed
+  }
+  
+  // Skip if already initialized
+  if (audioInitAttempted && audioAnalyser && audioSource) {
+    return true; // Already initialized
   }
   
   try {
@@ -660,11 +672,14 @@ export function initAudioDetection() {
     }
     
     console.log('[AR] Audio detection initialized');
+    audioInitAttempted = true; // Mark as successfully initialized
     
     // Start checking audio levels periodically
     startAudioMonitoring();
+    return true; // Success
   } catch (err) {
     console.error('[AR] Failed to initialize audio detection:', err);
+    return false; // Failure
   }
 }
 
