@@ -1,4 +1,42 @@
 // AR Controller - WebXR/AR functionality
+/*
+ * MIXAMO ANIMATION WORKFLOW:
+ * 
+ * HoloCall uses Mixamo animations that work on ANY Ready Player Me avatar.
+ * Follow these steps to add new animations:
+ * 
+ * 1. DOWNLOAD FROM MIXAMO (mixamo.com):
+ *    - Select any character (doesn't matter which one)
+ *    - Choose your animation (e.g., "Idle", "Talking", "Waving")
+ *    - Download settings:
+ *      ✓ Format: FBX
+ *      ✓ Skin: WITHOUT SKIN (important!)
+ *      ✓ FPS: 30
+ *    - Download the FBX file
+ * 
+ * 2. CONVERT FBX TO GLB:
+ *    - Use online converter: https://products.aspose.app/3d/conversion/fbx-to-glb
+ *    - Or use Blender: File → Import → FBX, then File → Export → glTF 2.0 (.glb)
+ *    - Keep the default export settings
+ * 
+ * 3. ADD TO HOLOCALL:
+ *    - Save the GLB file to: public/animations/
+ *    - Naming convention:
+ *      • idle.glb     → Idle/breathing animation
+ *      • talking.glb  → Talking/gesturing animation
+ *    - The system automatically loads and retargets bone names
+ * 
+ * HOW IT WORKS:
+ * - Mixamo exports animations with "mixamorig:" bone name prefixes
+ * - Ready Player Me avatars use different bone names (no prefix)
+ * - Our retargetMixamoAnimation() function automatically maps bone names
+ * - Animations work on ANY Ready Player Me avatar without modification
+ * 
+ * BONE NAME MAPPING:
+ * - Mixamo: mixamorig:Hips → Ready Player Me: Hips
+ * - Mixamo: mixamorig:Spine → Ready Player Me: Spine
+ * - All major bones are automatically mapped (see retargetMixamoAnimation)
+ */
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -722,29 +760,159 @@ function stopAudioMonitoring() {
   isSpeaking = false;
 }
 
-// Handle speaking state change - audio-reactive mouth movement handles this
+// Handle speaking state change - switches between idle and speaking animations
 function handleSpeakingChange(speaking) {
-  // Speaking animation is handled by audio-reactive mouth movement (blend shapes)
-  // The mouth opens/closes automatically based on audio volume in updateMouthAnimation()
+  if (!animationMixer) return;
   
-  // Optional: Could add subtle head movement or gestures here in the future
-  if (speaking) {
-    console.log('[AR] 🗣️ Speaking detected - mouth animation active');
+  // If we have both idle and speaking animations, crossfade between them
+  if (idleAction && speakingAction) {
+    const fadeTime = 0.3; // 300ms crossfade
+    
+    if (speaking) {
+      // Fade from idle to speaking
+      console.log('[AR] 🗣️ Speaking detected - switching to talking animation');
+      idleAction.fadeOut(fadeTime);
+      speakingAction.reset().fadeIn(fadeTime).play();
+    } else {
+      // Fade from speaking to idle
+      console.log('[AR] 🤐 Speaking stopped - switching to idle animation');
+      speakingAction.fadeOut(fadeTime);
+      idleAction.reset().fadeIn(fadeTime).play();
+    }
   } else {
-    console.log('[AR] 🤐 Speaking stopped - mouth animation idle');
+    // Just use audio-reactive mouth movement (blend shapes)
+    if (speaking) {
+      console.log('[AR] 🗣️ Speaking detected - mouth animation active');
+    } else {
+      console.log('[AR] 🤐 Speaking stopped - mouth animation idle');
+    }
   }
 }
 
+// Load Mixamo animation with automatic bone retargeting
+// Mixamo uses "mixamorig:" prefix, Ready Player Me uses different names
+async function loadMixamoAnimation(filename) {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(
+      `/animations/${filename}`,
+      (gltf) => {
+        if (!gltf.animations || gltf.animations.length === 0) {
+          console.warn('[AR] ⚠️ No animations found in', filename);
+          reject(new Error('No animations in file'));
+          return;
+        }
+        
+        const clip = gltf.animations[0];
+        console.log('[AR] 📦 Loaded Mixamo animation:', clip.name, `(${clip.duration.toFixed(2)}s)`);
+        
+        // CRITICAL: Retarget bone names from Mixamo to Ready Player Me
+        // Mixamo exports use "mixamorig:" prefix, Ready Player Me does not
+        const retargetedClip = retargetMixamoAnimation(clip);
+        
+        resolve(retargetedClip);
+      },
+      undefined,
+      (error) => {
+        console.error('[AR] ❌ Failed to load animation:', filename, error);
+        reject(error);
+      }
+    );
+  });
+}
+
+// Retarget Mixamo bone names to Ready Player Me skeleton
+function retargetMixamoAnimation(clip) {
+  console.log('[AR] 🎯 Retargeting animation bones...');
+  
+  const retargetedTracks = clip.tracks.map(track => {
+    // Extract bone name from track name (format: "boneName.property")
+    const [boneName, property] = track.name.split('.');
+    
+    // Remove "mixamorig:" prefix if present
+    let newBoneName = boneName.replace(/^mixamorig:/i, '');
+    
+    // Map common Mixamo bone names to Ready Player Me equivalents
+    const boneMap = {
+      'Hips': 'Hips',
+      'Spine': 'Spine',
+      'Spine1': 'Spine1',
+      'Spine2': 'Spine2',
+      'Neck': 'Neck',
+      'Head': 'Head',
+      'LeftShoulder': 'LeftShoulder',
+      'RightShoulder': 'RightShoulder',
+      'LeftArm': 'LeftArm',
+      'RightArm': 'RightArm',
+      'LeftForeArm': 'LeftForeArm',
+      'RightForeArm': 'RightForeArm',
+      'LeftHand': 'LeftHand',
+      'RightHand': 'RightHand',
+      'LeftUpLeg': 'LeftUpLeg',
+      'RightUpLeg': 'RightUpLeg',
+      'LeftLeg': 'LeftLeg',
+      'RightLeg': 'RightLeg',
+      'LeftFoot': 'LeftFoot',
+      'RightFoot': 'RightFoot'
+    };
+    
+    // Apply bone mapping if it exists
+    newBoneName = boneMap[newBoneName] || newBoneName;
+    
+    // Create new track with updated bone name
+    const newTrackName = `${newBoneName}.${property}`;
+    
+    // Clone the track with new name
+    if (track instanceof THREE.VectorKeyframeTrack) {
+      return new THREE.VectorKeyframeTrack(newTrackName, track.times, track.values);
+    } else if (track instanceof THREE.QuaternionKeyframeTrack) {
+      return new THREE.QuaternionKeyframeTrack(newTrackName, track.times, track.values);
+    } else if (track instanceof THREE.NumberKeyframeTrack) {
+      return new THREE.NumberKeyframeTrack(newTrackName, track.times, track.values);
+    } else {
+      console.warn('[AR] Unknown track type:', track);
+      return track;
+    }
+  });
+  
+  const retargetedClip = new THREE.AnimationClip(clip.name, clip.duration, retargetedTracks);
+  console.log('[AR] ✅ Animation retargeted:', retargetedTracks.length, 'tracks');
+  
+  return retargetedClip;
+}
+
 // Create procedural idle/breathing animation for avatar
-// Uses keyframe animation to create subtle breathing movement
-function loadIdleAnimation() {
+// Tries to load Mixamo animation first, falls back to procedural
+async function loadIdleAnimation() {
   if (!animationMixer || !avatarModel) {
     console.warn('[AR] Cannot load idle animation - mixer or model not ready');
     return;
   }
   
-  console.log('[AR] 🎬 Creating procedural breathing animation...');
+  console.log('[AR] 🎬 Loading idle animation...');
   
+  // Try to load Mixamo idle animation first
+  try {
+    const idleClip = await loadMixamoAnimation('idle.glb');
+    idleAction = animationMixer.clipAction(idleClip);
+    idleAction.setLoop(THREE.LoopRepeat);
+    idleAction.play();
+    console.log('[AR] ✅ Mixamo idle animation playing!');
+    
+    // Re-apply current audio state in case user is already speaking
+    console.log('[AR] 🔄 Re-applying audio state after idle animation loaded');
+    handleSpeakingChange(isSpeaking);
+    return;
+  } catch (error) {
+    console.log('[AR] ℹ️ No Mixamo idle.glb found, using procedural breathing...');
+  }
+  
+  // FALLBACK: Create procedural breathing animation
+  createProceduralBreathing();
+}
+
+// Procedural breathing animation (fallback)
+function createProceduralBreathing() {
   // Find the Spine bone for breathing animation
   let spineBone = null;
   avatarModel.traverse((child) => {
@@ -761,8 +929,6 @@ function loadIdleAnimation() {
   console.log('[AR] ✓ Found bone for breathing:', spineBone.name);
   
   // IMPORTANT: Capture the spine bone's bind pose (current position)
-  // Ready Player Me rigs use non-zero local translations for spine bones
-  // We must keyframe AROUND this base position for additive breathing
   const basePos = spineBone.position.clone();
   console.log('[AR] Spine bone bind pose:', {
     x: basePos.x.toFixed(4),
@@ -770,69 +936,62 @@ function loadIdleAnimation() {
     z: basePos.z.toFixed(4)
   });
   
-  // Create breathing animation (3-second cycle) - keyframes around bind pose
-  const times = [0, 1.5, 3]; // Keyframe times in seconds
-  const breathAmount = 0.003; // Subtle breathing movement (3mm)
+  // Create breathing animation (3-second cycle)
+  const times = [0, 1.5, 3];
+  const breathAmount = 0.003; // 3mm movement
   
   const positionValues = [
-    basePos.x, basePos.y, basePos.z,                        // Start: bind pose
-    basePos.x, basePos.y + breathAmount, basePos.z,         // Middle: inhale
-    basePos.x, basePos.y, basePos.z                         // End: exhale
+    basePos.x, basePos.y, basePos.z,
+    basePos.x, basePos.y + breathAmount, basePos.z,
+    basePos.x, basePos.y, basePos.z
   ];
   
-  // Create keyframe tracks
   const positionKF = new THREE.VectorKeyframeTrack(
     spineBone.name + '.position',
     times,
     positionValues
   );
   
-  // Create animation clip (3 seconds to match keyframe times)
   const breathingClip = new THREE.AnimationClip('Breathing', 3, [positionKF]);
   
-  // Create and play action
   idleAction = animationMixer.clipAction(breathingClip);
   idleAction.setLoop(THREE.LoopRepeat);
   idleAction.play();
   
   console.log('[AR] ✅ Procedural breathing animation playing!');
   
-  /* 
-   * TO ADD MIXAMO ANIMATIONS LATER:
-   * 1. Download idle animation from Mixamo (mixamo.com) as FBX
-   * 2. Convert FBX to GLB using: https://www.mixamo-to-glb.com/
-   * 3. Save GLB file to public/animations/idle.glb
-   * 4. Replace this function to load from local file:
-   *    const loader = new GLTFLoader();
-   *    loader.load('/animations/idle.glb', (gltf) => {
-   *      idleAction = animationMixer.clipAction(gltf.animations[0]);
-   *      idleAction.setLoop(THREE.LoopRepeat);
-   *      idleAction.play();
-   *    });
-   */
+  // Re-apply current audio state in case user is already speaking
+  console.log('[AR] 🔄 Re-applying audio state after procedural idle created');
+  handleSpeakingChange(isSpeaking);
 }
 
-// Speaking animation is handled by audio-reactive mouth movement (blend shapes)
-// No skeletal speaking animation needed - mouth movement is more natural and performant
-function loadSpeakingAnimation() {
-  console.log('[AR] ℹ️ Speaking animation handled by audio-reactive mouth movement');
+// Load speaking/talking animation
+// Tries to load Mixamo talking animation, otherwise just uses audio-reactive mouth
+async function loadSpeakingAnimation() {
+  if (!animationMixer || !avatarModel) {
+    console.warn('[AR] Cannot load speaking animation - mixer or model not ready');
+    return;
+  }
   
-  /* 
-   * NOTE: We use blend shape (morph target) animation for mouth movement,
-   * which is more natural and responsive than skeletal animations.
-   * 
-   * TO ADD MIXAMO GESTURING ANIMATIONS LATER (optional):
-   * 1. Download talking/gesturing animation from Mixamo as FBX
-   * 2. Convert to GLB using: https://www.mixamo-to-glb.com/
-   * 3. Save to public/animations/talking.glb
-   * 4. Load and blend with mouth movement:
-   *    const loader = new GLTFLoader();
-   *    loader.load('/animations/talking.glb', (gltf) => {
-   *      speakingAction = animationMixer.clipAction(gltf.animations[0]);
-   *      speakingAction.setLoop(THREE.LoopRepeat);
-   *      // Don't play immediately - triggered by audio detection
-   *    });
-   */
+  console.log('[AR] 🎤 Loading speaking animation...');
+  
+  // Try to load Mixamo talking animation first
+  try {
+    const talkingClip = await loadMixamoAnimation('talking.glb');
+    speakingAction = animationMixer.clipAction(talkingClip);
+    speakingAction.setLoop(THREE.LoopRepeat);
+    console.log('[AR] ✅ Mixamo talking animation loaded');
+    
+    // Re-apply current audio state in case user is already speaking
+    console.log('[AR] 🔄 Re-applying audio state after talking animation loaded');
+    handleSpeakingChange(isSpeaking);
+    return;
+  } catch (error) {
+    console.log('[AR] ℹ️ No Mixamo talking.glb found, using audio-reactive mouth only');
+  }
+  
+  // FALLBACK: Audio-reactive mouth movement handles speaking automatically
+  // No skeletal animation needed
 }
 
 /* ---------------- Touch Gesture Handlers ---------------- */
